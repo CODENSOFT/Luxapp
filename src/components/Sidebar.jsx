@@ -25,7 +25,7 @@ export default function Sidebar({ open, onClose }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <TrendingUp className="text-blue-600" size={22} />
-            <span className="font-semibold text-gray-900 text-lg">FinanceHub</span>
+            <span className="font-semibold text-gray-900 text-lg">LuxWash</span>
           </div>
           <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600">
             <X size={18} />
