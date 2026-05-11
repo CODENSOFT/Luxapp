@@ -1,63 +1,101 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
 
 const AppContext = createContext(null)
 
 const FILIALE_IMPLICITE = ['Birou Central', 'Filiala Nord', 'Filiala Sud', 'Filiala Est']
 const CATEGORII_IMPLICITE = ['Salariu', 'Vânzări', 'Chirie', 'Utilități', 'Consumabile', 'Marketing', 'Altele']
 
-function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
-}
-
 export function AppProvider({ children }) {
-  const [transactions, setTransactions] = useState(() => load('fin_transactions', []))
-  const [branches, setBranches] = useState(() => load('fin_branches', FILIALE_IMPLICITE))
-  const [categories, setCategories] = useState(() => load('fin_categories', CATEGORII_IMPLICITE))
+  const [transactions, setTransactions] = useState([])
+  const [branches, setBranches] = useState(FILIALE_IMPLICITE)
+  const [categories, setCategories] = useState(CATEGORII_IMPLICITE)
+  const [loading, setLoading] = useState(true)
+  const [eroare, setEroare] = useState(null)
 
+  const fetchTransactions = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+    if (error) { setEroare(error.message); return }
+    setTransactions(data ?? [])
+  }, [])
+
+  const fetchSettings = useCallback(async () => {
+    const { data, error } = await supabase.from('settings').select('*')
+    if (error) { setEroare(error.message); return }
+    const b = data?.find(s => s.key === 'branches')
+    const c = data?.find(s => s.key === 'categories')
+    if (b) setBranches(b.value)
+    if (c) setCategories(c.value)
+  }, [])
+
+  // Încarcă toate datele la start
   useEffect(() => {
-    localStorage.setItem('fin_transactions', JSON.stringify(transactions))
-  }, [transactions])
+    async function init() {
+      setLoading(true)
+      await Promise.all([fetchTransactions(), fetchSettings()])
+      setLoading(false)
+    }
+    init()
 
-  useEffect(() => {
-    localStorage.setItem('fin_branches', JSON.stringify(branches))
-  }, [branches])
+    // Ascultă modificările în timp real
+    const canal = supabase
+      .channel('sync-global')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchTransactions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
+      .subscribe()
 
-  useEffect(() => {
-    localStorage.setItem('fin_categories', JSON.stringify(categories))
-  }, [categories])
+    return () => supabase.removeChannel(canal)
+  }, [fetchTransactions, fetchSettings])
 
-  function addTransaction(tx) {
-    setTransactions(prev => [{ ...tx, id: crypto.randomUUID() }, ...prev])
+  async function addTransaction(tx) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([{ ...tx }])
+      .select()
+      .single()
+    if (error) { setEroare(error.message); return }
+    setTransactions(prev => [data, ...prev])
   }
 
-  function deleteTransaction(id) {
+  async function deleteTransaction(id) {
+    const { error } = await supabase.from('transactions').delete().eq('id', id)
+    if (error) { setEroare(error.message); return }
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
+  async function saveBranches(newList) {
+    await supabase.from('settings').upsert({ key: 'branches', value: newList })
+    setBranches(newList)
+  }
+
+  async function saveCategories(newList) {
+    await supabase.from('settings').upsert({ key: 'categories', value: newList })
+    setCategories(newList)
+  }
+
   function addBranch(name) {
-    if (name && !branches.includes(name)) setBranches(prev => [...prev, name])
+    if (name && !branches.includes(name)) saveBranches([...branches, name])
   }
 
   function removeBranch(name) {
-    setBranches(prev => prev.filter(b => b !== name))
+    saveBranches(branches.filter(b => b !== name))
   }
 
   function addCategory(name) {
-    if (name && !categories.includes(name)) setCategories(prev => [...prev, name])
+    if (name && !categories.includes(name)) saveCategories([...categories, name])
   }
 
   function removeCategory(name) {
-    setCategories(prev => prev.filter(c => c !== name))
+    saveCategories(categories.filter(c => c !== name))
   }
 
   return (
     <AppContext.Provider value={{
-      transactions, branches, categories,
+      transactions, branches, categories, loading, eroare,
       addTransaction, deleteTransaction,
       addBranch, removeBranch,
       addCategory, removeCategory,
