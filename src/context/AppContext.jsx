@@ -3,19 +3,12 @@ import { supabase } from '../lib/supabase'
 
 const AppContext = createContext(null)
 
-// Filiale fixe — nu se încarcă din baza de date
-export const FILIALE_FIXE = [
-  'Lunca Bâcului',
-  'Centru',
-  'Sîngera',
-  'Orhei',
-  'Мойка 5',
-]
-
+const FILIALE_IMPLICITE = ['Lunca Bâcului', 'Centru', 'Sîngera', 'Orhei', 'Мойка 5']
 const CATEGORII_IMPLICITE = ['Salariu', 'Vânzări', 'Chirie', 'Utilități', 'Consumabile', 'Marketing', 'Altele']
 
 export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState([])
+  const [branches, setBranches] = useState(FILIALE_IMPLICITE)
   const [categories, setCategories] = useState(CATEGORII_IMPLICITE)
   const [loading, setLoading] = useState(true)
   const [eroare, setEroare] = useState(null)
@@ -30,32 +23,31 @@ export function AppProvider({ children }) {
     setTransactions(data ?? [])
   }, [])
 
-  const fetchCategories = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'categories')
-      .single()
-    if (error) return // folosim categoriile implicite dacă nu există
-    if (data?.value) setCategories(data.value)
+  const fetchSettings = useCallback(async () => {
+    const { data, error } = await supabase.from('settings').select('*')
+    if (error) return
+    const b = data?.find(s => s.key === 'branches')
+    const c = data?.find(s => s.key === 'categories')
+    if (b?.value) setBranches(b.value)
+    if (c?.value) setCategories(c.value)
   }, [])
 
   useEffect(() => {
     async function init() {
       setLoading(true)
-      await Promise.all([fetchTransactions(), fetchCategories()])
+      await Promise.all([fetchTransactions(), fetchSettings()])
       setLoading(false)
     }
     init()
 
-    // Sincronizare în timp real
     const canal = supabase
       .channel('sync-global')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchTransactions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .subscribe()
 
     return () => supabase.removeChannel(canal)
-  }, [fetchTransactions, fetchCategories])
+  }, [fetchTransactions, fetchSettings])
 
   async function addTransaction(tx) {
     const { data, error } = await supabase
@@ -76,34 +68,45 @@ export function AppProvider({ children }) {
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
-  async function addCategory(name) {
-    if (!name || categories.includes(name)) return
-    const newList = [...categories, name]
-    const { error } = await supabase
-      .from('settings')
-      .upsert({ key: 'categories', value: newList })
+  async function saveBranches(newList) {
+    const { error } = await supabase.from('settings').upsert({ key: 'branches', value: newList })
+    if (error) { setEroare(error.message); return }
+    setBranches(newList)
+  }
+
+  async function saveCategories(newList) {
+    const { error } = await supabase.from('settings').upsert({ key: 'categories', value: newList })
     if (error) { setEroare(error.message); return }
     setCategories(newList)
   }
 
-  async function removeCategory(name) {
-    const newList = categories.filter(c => c !== name)
-    const { error } = await supabase
-      .from('settings')
-      .upsert({ key: 'categories', value: newList })
-    if (error) { setEroare(error.message); return }
-    setCategories(newList)
+  function addBranch(name) {
+    if (name && !branches.includes(name)) saveBranches([...branches, name])
+  }
+
+  function removeBranch(name) {
+    saveBranches(branches.filter(b => b !== name))
+  }
+
+  function addCategory(name) {
+    if (name && !categories.includes(name)) saveCategories([...categories, name])
+  }
+
+  function removeCategory(name) {
+    saveCategories(categories.filter(c => c !== name))
   }
 
   return (
     <AppContext.Provider value={{
       transactions,
-      branches: FILIALE_FIXE,
+      branches,
       categories,
       loading,
       eroare,
       addTransaction,
       deleteTransaction,
+      addBranch,
+      removeBranch,
       addCategory,
       removeCategory,
     }}>
