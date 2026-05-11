@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { FILIALE_FIXE } from '../context/AppContext'
 import TopBar from '../components/TopBar'
 
 function ListaEtichete({ items, onRemove }) {
@@ -60,20 +61,27 @@ function FormularAdaugare({ placeholder, onAdd }) {
 }
 
 export default function Settings({ onMenuClick }) {
-  const { branches, categories, addBranch, removeBranch, addCategory, removeCategory } = useApp()
+  const { categories, addCategory, removeCategory } = useApp()
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
       <TopBar title="Setări" onMenuClick={onMenuClick} />
 
       <div className="p-6 space-y-6 max-w-2xl">
+        {/* Filiale — fixe, doar vizualizare */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-gray-900">Filiale</h2>
-          <p className="text-sm text-gray-500 mt-1">Gestionați lista de filiale disponibile în aplicație.</p>
-          <ListaEtichete items={branches} onRemove={removeBranch} />
-          <FormularAdaugare placeholder="Nume filială nouă…" onAdd={addBranch} />
+          <p className="text-sm text-gray-500 mt-1">Filialele sunt predefinite și nu pot fi modificate.</p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {FILIALE_FIXE.map(f => (
+              <span key={f} className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-sm font-medium">
+                {f}
+              </span>
+            ))}
+          </div>
         </div>
 
+        {/* Categorii */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-gray-900">Categorii</h2>
           <p className="text-sm text-gray-500 mt-1">Gestionați categoriile de venituri și cheltuieli.</p>
@@ -81,11 +89,16 @@ export default function Settings({ onMenuClick }) {
           <FormularAdaugare placeholder="Nume categorie nouă…" onAdd={addCategory} />
         </div>
 
-        <div className="bg-white rounded-xl border border-red-200 p-6">
-          <h2 className="text-base font-semibold text-red-700">Date</h2>
+        {/* Info baza de date */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-base font-semibold text-gray-900">Baza de Date</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Toate datele sunt stocate local în browser-ul dumneavoastră. Ștergerea datelor din browser va elimina toate tranzacțiile.
+            Datele sunt salvate în cloud (Supabase) și sunt sincronizate în timp real pe toate dispozitivele.
           </p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span className="text-sm text-green-700 font-medium">Conectat la Supabase</span>
+          </div>
         </div>
       </div>
     </div>

@@ -1,14 +1,21 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabase, supabaseConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 const AppContext = createContext(null)
 
-const FILIALE_IMPLICITE = ['Birou Central', 'Filiala Nord', 'Filiala Sud', 'Filiala Est']
+// Filiale fixe — nu se încarcă din baza de date
+export const FILIALE_FIXE = [
+  'Lunca Bâcului',
+  'Centru',
+  'Sîngera',
+  'Orhei',
+  'Мойка 5',
+]
+
 const CATEGORII_IMPLICITE = ['Salariu', 'Vânzări', 'Chirie', 'Utilități', 'Consumabile', 'Marketing', 'Altele']
 
 export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState([])
-  const [branches, setBranches] = useState(FILIALE_IMPLICITE)
   const [categories, setCategories] = useState(CATEGORII_IMPLICITE)
   const [loading, setLoading] = useState(true)
   const [eroare, setEroare] = useState(null)
@@ -23,35 +30,32 @@ export function AppProvider({ children }) {
     setTransactions(data ?? [])
   }, [])
 
-  const fetchSettings = useCallback(async () => {
-    const { data, error } = await supabase.from('settings').select('*')
-    if (error) { setEroare(error.message); return }
-    const b = data?.find(s => s.key === 'branches')
-    const c = data?.find(s => s.key === 'categories')
-    if (b) setBranches(b.value)
-    if (c) setCategories(c.value)
+  const fetchCategories = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'categories')
+      .single()
+    if (error) return // folosim categoriile implicite dacă nu există
+    if (data?.value) setCategories(data.value)
   }, [])
 
-  // Încarcă toate datele la start
   useEffect(() => {
-    if (!supabaseConfigured) { setLoading(false); return }
-
     async function init() {
       setLoading(true)
-      await Promise.all([fetchTransactions(), fetchSettings()])
+      await Promise.all([fetchTransactions(), fetchCategories()])
       setLoading(false)
     }
     init()
 
-    // Ascultă modificările în timp real
+    // Sincronizare în timp real
     const canal = supabase
       .channel('sync-global')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchTransactions)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .subscribe()
 
     return () => supabase.removeChannel(canal)
-  }, [fetchTransactions, fetchSettings])
+  }, [fetchTransactions, fetchCategories])
 
   async function addTransaction(tx) {
     const { data, error } = await supabase
@@ -64,43 +68,44 @@ export function AppProvider({ children }) {
   }
 
   async function deleteTransaction(id) {
-    const { error } = await supabase.from('transactions').delete().eq('id', id)
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
     if (error) { setEroare(error.message); return }
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
-  async function saveBranches(newList) {
-    await supabase.from('settings').upsert({ key: 'branches', value: newList })
-    setBranches(newList)
-  }
-
-  async function saveCategories(newList) {
-    await supabase.from('settings').upsert({ key: 'categories', value: newList })
+  async function addCategory(name) {
+    if (!name || categories.includes(name)) return
+    const newList = [...categories, name]
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key: 'categories', value: newList })
+    if (error) { setEroare(error.message); return }
     setCategories(newList)
   }
 
-  function addBranch(name) {
-    if (name && !branches.includes(name)) saveBranches([...branches, name])
-  }
-
-  function removeBranch(name) {
-    saveBranches(branches.filter(b => b !== name))
-  }
-
-  function addCategory(name) {
-    if (name && !categories.includes(name)) saveCategories([...categories, name])
-  }
-
-  function removeCategory(name) {
-    saveCategories(categories.filter(c => c !== name))
+  async function removeCategory(name) {
+    const newList = categories.filter(c => c !== name)
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key: 'categories', value: newList })
+    if (error) { setEroare(error.message); return }
+    setCategories(newList)
   }
 
   return (
     <AppContext.Provider value={{
-      transactions, branches, categories, loading, eroare,
-      addTransaction, deleteTransaction,
-      addBranch, removeBranch,
-      addCategory, removeCategory,
+      transactions,
+      branches: FILIALE_FIXE,
+      categories,
+      loading,
+      eroare,
+      addTransaction,
+      deleteTransaction,
+      addCategory,
+      removeCategory,
     }}>
       {children}
     </AppContext.Provider>

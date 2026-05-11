@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { Copy, Check } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Incarcare from './components/Incarcare'
 import Dashboard from './pages/Dashboard'
@@ -9,33 +10,7 @@ import Settings from './pages/Settings'
 import { useApp } from './context/AppContext'
 import { supabaseConfigured } from './lib/supabase'
 
-function EcranConfigurare() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 max-w-lg w-full space-y-6">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Configurare necesară</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Aplicația necesită o bază de date Supabase. Urmați pașii de mai jos.
-          </p>
-        </div>
-
-        <div className="space-y-4 text-sm">
-          <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">1</span>
-            <div>
-              <p className="font-semibold text-gray-800">Creați cont Supabase</p>
-              <a href="https://supabase.com" target="_blank" rel="noreferrer"
-                className="text-blue-600 hover:underline">supabase.com</a>
-              {' '}→ Sign Up → New Project
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">2</span>
-            <div>
-              <p className="font-semibold text-gray-800">Rulați SQL-ul în SQL Editor</p>
-              <pre className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs overflow-x-auto whitespace-pre-wrap text-gray-700">{`create table public.transactions (
+const SQL_CREARE = `create table public.transactions (
   id uuid primary key default gen_random_uuid(),
   type text not null,
   branch text not null,
@@ -52,34 +27,91 @@ create table public.settings (
 );
 
 insert into public.settings (key, value) values
-  ('branches', '["Birou Central","Filiala Nord","Filiala Sud","Filiala Est"]'),
   ('categories', '["Salariu","Vânzări","Chirie","Utilități","Consumabile","Marketing","Altele"]');
 
 alter table public.transactions enable row level security;
 alter table public.settings enable row level security;
 create policy "Acces total" on public.transactions for all using (true) with check (true);
-create policy "Acces total" on public.settings for all using (true) with check (true);`}</pre>
-            </div>
-          </div>
+create policy "Acces total" on public.settings for all using (true) with check (true);`
 
-          <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">3</span>
-            <div>
-              <p className="font-semibold text-gray-800">Creați fișierul <code className="bg-gray-100 px-1 rounded">.env</code> în rădăcina proiectului</p>
-              <pre className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700">{`VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...`}</pre>
-              <p className="text-gray-500 mt-1">Cheile se găsesc în Supabase → Settings → API</p>
-            </div>
-          </div>
+function ButonCopiere({ text }) {
+  const [copiat, setCopiat] = useState(false)
+  function copiaza() {
+    navigator.clipboard.writeText(text)
+    setCopiat(true)
+    setTimeout(() => setCopiat(false), 2000)
+  }
+  return (
+    <button
+      onClick={copiaza}
+      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
+    >
+      {copiat ? <Check size={13} /> : <Copy size={13} />}
+      {copiat ? 'Copiat!' : 'Copiază SQL'}
+    </button>
+  )
+}
 
-          <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">4</span>
-            <div>
-              <p className="font-semibold text-gray-800">Reporniți aplicația</p>
-              <code className="bg-gray-100 px-2 py-1 rounded text-xs">npm run dev</code>
-            </div>
+function EcranTabeleNecreate() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl border border-orange-200 shadow-sm p-6 max-w-2xl w-full space-y-5">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Tabelele din baza de date nu există</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Conexiunea la Supabase funcționează, dar tabelele nu au fost create.
+              Rulați SQL-ul de mai jos în <strong>Supabase → SQL Editor</strong>.
+            </p>
           </div>
         </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-gray-700">SQL de rulat:</p>
+            <ButonCopiere text={SQL_CREARE} />
+          </div>
+          <pre className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 overflow-x-auto whitespace-pre">
+            {SQL_CREARE}
+          </pre>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
+          <p className="font-semibold text-blue-800">Pași:</p>
+          <ol className="list-decimal list-inside space-y-1 text-blue-700">
+            <li>Mergeți la <strong>supabase.com</strong> → proiectul vostru</li>
+            <li>Deschideți <strong>SQL Editor</strong> → <strong>New query</strong></li>
+            <li>Copiați și lipiți SQL-ul de mai sus</li>
+            <li>Apăsați <strong>Run</strong></li>
+            <li>Reîncărcați această pagină</li>
+          </ol>
+        </div>
+
+        <button
+          onClick={() => window.location.reload()}
+          className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors"
+        >
+          Am rulat SQL-ul — Reîncarcă aplicația
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EcranConfigurare() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 max-w-md w-full space-y-4">
+        <h1 className="text-lg font-bold text-gray-900">Configurare necesară</h1>
+        <p className="text-sm text-gray-500">
+          Creați fișierul <code className="bg-gray-100 px-1 rounded">.env</code> în rădăcina proiectului cu:
+        </p>
+        <pre className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-700">
+{`VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...`}
+        </pre>
+        <p className="text-xs text-gray-400">Cheile se găsesc în Supabase → Settings → API</p>
       </div>
     </div>
   )
@@ -89,13 +121,22 @@ function Continut() {
   const { loading, eroare } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  if (eroare?.includes('schema cache') || eroare?.includes('relation') || eroare?.includes('does not exist')) {
+    return <EcranTabeleNecreate />
+  }
+
   if (eroare) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50 p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 max-w-md text-sm">
-          <p className="font-bold mb-1">Eroare la conectare Supabase</p>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 max-w-md text-sm space-y-2">
+          <p className="font-bold">Eroare la conectare Supabase</p>
           <p>{eroare}</p>
-          <p className="mt-2 text-red-500">Verificați fișierul .env și reporniți aplicația.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium"
+          >
+            Reîncearcă
+          </button>
         </div>
       </div>
     )
