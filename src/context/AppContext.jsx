@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseConfigured } from '../lib/supabase'
 
 const AppContext = createContext(null)
 
@@ -34,6 +34,8 @@ export function AppProvider({ children }) {
 
   // Încarcă toate datele la start
   useEffect(() => {
+    if (!supabaseConfigured) { setLoading(false); return }
+
     async function init() {
       setLoading(true)
       await Promise.all([fetchTransactions(), fetchSettings()])
