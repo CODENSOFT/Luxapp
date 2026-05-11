@@ -10,16 +10,9 @@ import StatCard from '../components/StatCard'
 import EntryForm from '../components/EntryForm'
 import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, monthLabel, last6Months, inRange } from '../utils/dateUtils'
 import { sumBy, netProfit, byCategory, byMonthAndType } from '../utils/calcUtils'
+import SelectorPerioada, { FILTRE } from '../components/SelectorPerioada'
 
 const PIE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
-
-const FILTRE = [
-  { key: 'luna', label: 'Luna Aceasta' },
-  { key: 'saptamana', label: 'Săptămâna Aceasta' },
-  { key: 'azi', label: 'Ziua de Azi' },
-  { key: 'tot', label: 'Tot Timpul' },
-  { key: 'custom', label: 'Personalizat' },
-]
 
 export default function Dashboard({ onMenuClick }) {
   const { transactions, branches } = useApp()
@@ -57,41 +50,30 @@ export default function Dashboard({ onMenuClick }) {
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
       <TopBar title="Panou Principal" onMenuClick={onMenuClick} />
 
-      <div className="p-6 space-y-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg overflow-hidden border border-gray-300">
-            {FILTRE.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f.key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+          <SelectorPerioada value={filter} onChange={setFilter} />
           {filter === 'custom' && (
-            <>
-              <input type="date" className={inputCls} value={customStart} onChange={e => setCustomStart(e.target.value)} />
-              <span className="text-gray-400 text-sm">până la</span>
-              <input type="date" className={inputCls} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-            </>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customStart} onChange={e => setCustomStart(e.target.value)} />
+              <span className="text-gray-400 text-sm shrink-0">până la</span>
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            </div>
           )}
-          <select className={inputCls} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
-            <option value="toate">Toate Filialele</option>
-            {branches.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <PlusCircle size={16} />
-            Adaugă Intrare
-          </button>
+          <div className="flex gap-2 sm:ml-auto">
+            <select className={`${inputCls} flex-1 sm:flex-none`} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
+              <option value="toate">Toate Filialele</option>
+              {branches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <button
+              onClick={() => setShowForm(v => !v)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              <PlusCircle size={16} />
+              <span className="hidden xs:inline">Adaugă Intrare</span>
+              <span className="xs:hidden">Adaugă</span>
+            </button>
+          </div>
         </div>
 
         {showForm && (

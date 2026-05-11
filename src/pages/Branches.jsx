@@ -6,14 +6,7 @@ import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
 import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, inRange } from '../utils/dateUtils'
 import { sumBy } from '../utils/calcUtils'
-
-const FILTRE = [
-  { key: 'luna', label: 'Luna Aceasta' },
-  { key: 'saptamana', label: 'Săptămâna Aceasta' },
-  { key: 'azi', label: 'Ziua de Azi' },
-  { key: 'tot', label: 'Tot Timpul' },
-  { key: 'custom', label: 'Personalizat' },
-]
+import SelectorPerioada from '../components/SelectorPerioada'
 
 export default function Branches({ onMenuClick }) {
   const { transactions, branches } = useApp()
@@ -45,29 +38,15 @@ export default function Branches({ onMenuClick }) {
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
       <TopBar title="Statistici Filiale" onMenuClick={onMenuClick} />
 
-      <div className="p-6 space-y-6">
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex rounded-lg overflow-hidden border border-gray-300">
-            {FILTRE.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f.key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+          <SelectorPerioada value={filter} onChange={setFilter} />
           {filter === 'custom' && (
-            <>
-              <input type="date" className={inputCls} value={customStart} onChange={e => setCustomStart(e.target.value)} />
-              <span className="text-gray-400 text-sm">până la</span>
-              <input type="date" className={inputCls} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-            </>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customStart} onChange={e => setCustomStart(e.target.value)} />
+              <span className="text-gray-400 text-sm shrink-0">până la</span>
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            </div>
           )}
         </div>
 
