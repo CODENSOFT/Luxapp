@@ -8,7 +8,7 @@ function emptyRow() {
 }
 
 export default function TabelIntrari({ onClose }) {
-  const { branches, addTransaction } = useApp()
+  const { branches, saveEntry } = useApp()
   const [rows, setRows] = useState(() => Array.from({ length: 5 }, emptyRow))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -31,14 +31,10 @@ export default function TabelIntrari({ onClose }) {
 
     setSaving(true)
     for (const r of filled) {
-      const inc = parseFloat(r.incasare)
-      const av = parseFloat(r.avans)
-      if (!isNaN(inc) && inc > 0) {
-        await addTransaction({ type: 'Venit', branch: r.branch, amount: inc, date: r.date, description: r.comentarii, category: '' })
-      }
-      if (!isNaN(av) && av > 0) {
-        await addTransaction({ type: 'Cheltuială', branch: r.branch, amount: av, date: r.date, description: r.comentarii, category: 'Avans' })
-      }
+      const inc = parseFloat(r.incasare) || 0
+      const av = parseFloat(r.avans) || 0
+      const expenses = av > 0 ? [{ amount: av, category: '', comentariu: r.comentarii }] : []
+      await saveEntry(r.date, r.branch, inc, expenses)
     }
     setSaving(false)
     onClose()
