@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, PlusCircle, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, PlusCircle } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -7,7 +7,7 @@ import {
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
 import StatCard from '../components/StatCard'
-import EntryForm from '../components/EntryForm'
+import TabelIntrari from '../components/TabelIntrari'
 import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, monthLabel, last6Months, inRange } from '../utils/dateUtils'
 import { sumBy, netProfit, byCategory, byMonthAndType } from '../utils/calcUtils'
 import SelectorPerioada, { FILTRE } from '../components/SelectorPerioada'
@@ -76,17 +76,7 @@ export default function Dashboard({ onMenuClick }) {
           </div>
         </div>
 
-        {showForm && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-900">Tranzacție Nouă</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
-            <EntryForm onSaved={() => setShowForm(false)} />
-          </div>
-        )}
+        {showForm && <TabelIntrari onClose={() => setShowForm(false)} />}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard title="Total Venituri" amount={income} icon={TrendingUp} color="green" subtitle={filterLabel} />
