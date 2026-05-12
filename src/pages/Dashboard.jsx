@@ -1,66 +1,75 @@
-import { Fragment, useState } from 'react'
-import { ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react'
+import { useState } from 'react'
+import { TrendingUp, TrendingDown, DollarSign, PlusCircle } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from 'recharts'
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
+import StatCard from '../components/StatCard'
 import TabelIntrari from '../components/TabelIntrari'
-import { today, currentMonthKey, monthDays, formatMonthRo, addMonths } from '../utils/dateUtils'
+import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, monthLabel, last6Months, inRange } from '../utils/dateUtils'
+import SelectorPerioada, { FILTRE } from '../components/SelectorPerioada'
 
-const BRANCH_BG = {
-  'Lunca Bâcului': '#FFD6D6',
-  'Centru':        '#D6E4FF',
-  'Sîngera':       '#D6FFD6',
-  'Orhei':         '#E8D6FF',
-  'Мойка 5':       '#FFFBD6',
-}
-const FALLBACK = ['#F5F5F5','#E8F5E9','#E8EAF6','#FFF3E0','#FCE4EC']
-function branchBg(branch, i) { return BRANCH_BG[branch] || FALLBACK[i % FALLBACK.length] }
+const PIE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
-const CAT_CLR = {
-  'Salariu':     'bg-blue-100 text-blue-700',
-  'Chirie':      'bg-violet-100 text-violet-700',
-  'Utilități':   'bg-orange-100 text-orange-700',
-  'Consumabile': 'bg-emerald-100 text-emerald-700',
-  'Combustibil': 'bg-amber-100 text-amber-700',
-  'Reparații':   'bg-red-100 text-red-700',
-  'Marketing':   'bg-pink-100 text-pink-700',
-  'Altele':      'bg-gray-100 text-gray-600',
+function incasariTotal(entries) {
+  return entries.reduce((s, e) => s + (Number(e.incasare) || 0), 0)
 }
 
-function num(n) {
-  if (!n) return ''
-  return Number(n).toLocaleString('ro-MD', { maximumFractionDigits: 2 })
-}
-function fmtNet(n, hasData) {
-  if (!hasData) return ''
-  const a = Math.abs(n).toLocaleString('ro-MD', { maximumFractionDigits: 2 })
-  return n < 0 ? `(${a})` : a
+function cheltuieliTotal(entries) {
+  return entries.reduce((s, e) =>
+    s + (e.expenses || []).reduce((s2, x) => s2 + (Number(x.amount) || 0), 0), 0)
 }
 
-const H1 = 36
-const H2 = 30
-const border = '1px solid #ccc'
+function byCategory(entries) {
+  const map = {}
+  entries.forEach(e => {
+    (e.expenses || []).forEach(exp => {
+      if (exp.category) map[exp.category] = (map[exp.category] || 0) + (Number(exp.amount) || 0)
+    })
+  })
+  return Object.entries(map).map(([name, value]) => ({ name, value }))
+}
+
+function byMonthData(entries, months) {
+  return months.map(month => {
+    const me = entries.filter(e => e.date?.startsWith(month))
+    return { month, Venit: incasariTotal(me), Cheltuială: cheltuieliTotal(me) }
+  })
+}
 
 export default function Dashboard({ onMenuClick }) {
-  const { branches, getEntry } = useApp()
-  const [month, setMonth] = useState(currentMonthKey)
+  const { entries, branches } = useApp()
+  const [filter, setFilter] = useState('luna')
+  const [branchFilter, setBranchFilter] = useState('toate')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
   const [showForm, setShowForm] = useState(false)
 
-  const days = monthDays(month)
-  const todayStr = today()
-
-  function calc(date, branch) {
-    const e = getEntry(date, branch)
-    if (!e) return { inc: 0, av: 0, exps: [], net: 0, has: false }
-    const av = (e.expenses || []).reduce((s, x) => s + (Number(x.amount) || 0), 0)
-    const inc = Number(e.incasare) || 0
-    return { inc, av, exps: e.expenses || [], net: inc - av, has: true }
+  function getRange() {
+    if (filter === 'luna') return getMonthRange()
+    if (filter === 'saptamana') return getWeekRange()
+    if (filter === 'azi') return getTodayRange()
+    if (filter === 'custom') return { start: customStart, end: customEnd }
+    return { start: '', end: '' }
   }
 
-  const monthlyTotals = branches.map(branch => {
-    let inc = 0, av = 0
-    days.forEach(d => { const c = calc(d, branch); inc += c.inc; av += c.av })
-    return { branch, inc, av, net: inc - av }
+  const { start, end } = getRange()
+  const filtered = entries.filter(e => {
+    const inBranch = branchFilter === 'toate' || e.branch === branchFilter
+    return inBranch && inRange(e.date, start, end)
   })
+
+  const income = incasariTotal(filtered)
+  const expense = cheltuieliTotal(filtered)
+  const net = income - expense
+  const months = last6Months()
+  const monthlyData = byMonthData(entries, months).map(d => ({ ...d, month: monthLabel(d.month) }))
+  const pieData = byCategory(filtered)
+  const filterLabel = FILTRE.find(f => f.key === filter)?.label ?? ''
+
+  const inputCls = "rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
@@ -68,187 +77,86 @@ export default function Dashboard({ onMenuClick }) {
 
       {showForm && <TabelIntrari onClose={() => setShowForm(false)} />}
 
-      <div className="p-3 sm:p-4">
-        {/* Controls row */}
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+          <SelectorPerioada value={filter} onChange={setFilter} />
+          {filter === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customStart} onChange={e => setCustomStart(e.target.value)} />
+              <span className="text-gray-400 text-sm shrink-0">până la</span>
+              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            </div>
+          )}
+          <div className="flex gap-2 sm:ml-auto">
+            <select className={`${inputCls} flex-1 sm:flex-none`} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
+              <option value="toate">Toate Filialele</option>
+              {branches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
             <button
-              onClick={() => setMonth(m => addMonths(m, -1))}
-              className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
             >
-              <ChevronLeft size={18} className="text-gray-600" />
-            </button>
-            <span className="text-sm font-bold text-gray-900 min-w-[130px] text-center select-none">
-              {formatMonthRo(month)}
-            </span>
-            <button
-              onClick={() => setMonth(m => addMonths(m, 1))}
-              className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <ChevronRight size={18} className="text-gray-600" />
+              <PlusCircle size={16} />
+              <span className="hidden xs:inline">Adaugă Intrare</span>
+              <span className="xs:hidden">Adaugă</span>
             </button>
           </div>
-
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <PlusCircle size={15} />
-            Adaugă Intrare
-          </button>
         </div>
 
-        {/* Excel table */}
-        <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff' }}>
-          <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
-            <thead>
-              {/* Row 1 — branch names */}
-              <tr style={{ height: H1 }}>
-                <th style={{
-                  position: 'sticky', top: 0, left: 0, zIndex: 40,
-                  background: '#1e3a5f', color: '#fff',
-                  border, padding: '0 10px', minWidth: 44,
-                  boxShadow: '2px 0 0 #aaa',
-                }}>DATA</th>
-                {branches.map((branch, i) => (
-                  <th key={branch} colSpan={4} style={{
-                    position: 'sticky', top: 0, zIndex: 20,
-                    background: '#1e3a5f', color: '#fff',
-                    border, padding: '0 8px', textAlign: 'center',
-                    fontWeight: 700,
-                  }}>
-                    {branch.toUpperCase()}
-                  </th>
-                ))}
-                <th style={{
-                  position: 'sticky', top: 0, zIndex: 20,
-                  background: '#FFD700', color: '#000',
-                  border, padding: '0 8px', textAlign: 'center',
-                  minWidth: 82, fontWeight: 700,
-                }}>Итог за день</th>
-              </tr>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard title="Total Venituri" amount={income} icon={TrendingUp} color="green" subtitle={filterLabel} />
+          <StatCard title="Total Cheltuieli" amount={expense} icon={TrendingDown} color="red" subtitle={filterLabel} />
+          <StatCard title="Profit Net" amount={net} icon={DollarSign} color={net >= 0 ? 'blue' : 'red'} subtitle={filterLabel} />
+        </div>
 
-              {/* Row 2 — sub-columns */}
-              <tr style={{ height: H2 }}>
-                {branches.map((branch, i) => {
-                  const bg = branchBg(branch, i)
-                  return (
-                    <Fragment key={branch}>
-                      {['Încasare', 'Avans', 'Comentarii', 'Total'].map(col => (
-                        <th key={col} style={{
-                          position: 'sticky', top: H1, zIndex: 20,
-                          background: bg, border,
-                          padding: '0 6px', textAlign: 'center',
-                          color: '#374151', fontWeight: 600,
-                          minWidth: col === 'Comentarii' ? 100 : col === 'Total' ? 68 : 68,
-                        }}>{col}</th>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">Venituri vs Cheltuieli — Ultimele 6 Luni</h2>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="Venit" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Cheltuială" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">Cheltuieli pe Categorie</h2>
+            {pieData.length === 0 ? (
+              <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">
+                Nu există date despre cheltuieli
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
-                    </Fragment>
-                  )
-                })}
-              </tr>
-            </thead>
-
-            <tbody>
-              {days.map(date => {
-                const day = date.slice(8)
-                const isToday = date === todayStr
-                const rowData = branches.map((branch, i) => ({ branch, i, ...calc(date, branch) }))
-                const dailyNet = rowData.reduce((s, d) => s + d.net, 0)
-                const hasDayData = rowData.some(d => d.has)
-
-                return (
-                  <tr key={date} style={{ background: isToday ? '#EFF6FF' : undefined }}>
-                    <td style={{
-                      position: 'sticky', left: 0, zIndex: 10,
-                      background: isToday ? '#DBEAFE' : '#F9FAFB',
-                      border, textAlign: 'center', padding: '0 8px',
-                      fontWeight: 700, color: isToday ? '#1d4ed8' : '#374151',
-                      boxShadow: '2px 0 0 #aaa',
-                    }}>{day}</td>
-
-                    {rowData.map(({ branch, i, inc, av, exps, net, has }) => {
-                      const bg = branchBg(branch, i)
-                      return (
-                        <Fragment key={branch}>
-                          <td style={{ background: bg, border, textAlign: 'right', padding: '2px 6px', color: inc && has ? '#15803d' : '#d1d5db', fontWeight: inc && has ? 600 : 400 }}>
-                            {has && inc ? num(inc) : ''}
-                          </td>
-                          <td style={{ background: bg, border, textAlign: 'right', padding: '2px 6px', color: av && has ? '#dc2626' : '#d1d5db', fontWeight: av && has ? 600 : 400 }}>
-                            {has && av ? num(av) : ''}
-                          </td>
-                          <td style={{ background: bg, border, padding: '2px 4px', maxWidth: 110 }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                              {exps.map((exp, j) => exp.category ? (
-                                <span key={j} className={`inline-block px-1 py-0.5 rounded text-[9px] leading-tight font-medium ${CAT_CLR[exp.category] || 'bg-gray-100 text-gray-600'}`}>
-                                  {exp.category}
-                                </span>
-                              ) : null)}
-                            </div>
-                          </td>
-                          <td style={{
-                            background: bg, border,
-                            textAlign: 'right', padding: '2px 6px',
-                            fontWeight: 600,
-                            color: !has ? '#d1d5db' : net >= 0 ? '#15803d' : '#dc2626',
-                          }}>
-                            {fmtNet(net, has)}
-                          </td>
-                        </Fragment>
-                      )
-                    })}
-
-                    <td style={{
-                      background: hasDayData ? '#FFFDE7' : '#FFFFF0',
-                      border, textAlign: 'right', padding: '2px 8px',
-                      fontWeight: 700,
-                      color: !hasDayData ? '#d1d5db' : dailyNet >= 0 ? '#15803d' : '#b91c1c',
-                    }}>
-                      {hasDayData ? fmtNet(dailyNet, true) : ''}
-                    </td>
-                  </tr>
-                )
-              })}
-
-              {/* Totals row */}
-              <tr style={{ borderTop: '2px solid #374151' }}>
-                <td style={{
-                  position: 'sticky', left: 0, zIndex: 10,
-                  background: '#E5E7EB', border: '1px solid #9CA3AF',
-                  textAlign: 'center', padding: '3px 8px',
-                  fontWeight: 800, color: '#111827',
-                  boxShadow: '2px 0 0 #aaa',
-                }}>TOTAL</td>
-                {monthlyTotals.map(({ branch, inc, av, net }, i) => {
-                  const bg = branchBg(branch, i)
-                  const hm = inc > 0 || av > 0
-                  return (
-                    <Fragment key={branch}>
-                      <td style={{ background: bg, border: '1px solid #9CA3AF', textAlign: 'right', padding: '3px 6px', fontWeight: 700, color: '#15803d' }}>
-                        {hm && inc ? num(inc) : ''}
-                      </td>
-                      <td style={{ background: bg, border: '1px solid #9CA3AF', textAlign: 'right', padding: '3px 6px', fontWeight: 700, color: '#dc2626' }}>
-                        {hm && av ? num(av) : ''}
-                      </td>
-                      <td style={{ background: bg, border: '1px solid #9CA3AF' }} />
-                      <td style={{ background: bg, border: '1px solid #9CA3AF', textAlign: 'right', padding: '3px 6px', fontWeight: 700, color: net >= 0 ? '#15803d' : '#b91c1c' }}>
-                        {hm ? fmtNet(net, true) : ''}
-                      </td>
-                    </Fragment>
-                  )
-                })}
-                {(() => {
-                  const gn = monthlyTotals.reduce((s, t) => s + t.net, 0)
-                  const hg = monthlyTotals.some(t => t.inc > 0 || t.av > 0)
-                  return (
-                    <td style={{ background: '#FFD700', border: '1px solid #9CA3AF', textAlign: 'right', padding: '3px 8px', fontWeight: 800, fontSize: 13, color: gn >= 0 ? '#14532d' : '#7f1d1d' }}>
-                      {hg ? fmtNet(gn, true) : ''}
-                    </td>
-                  )
-                })()}
-              </tr>
-            </tbody>
-          </table>
+                    </Pie>
+                    <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <ul className="mt-2 space-y-1">
+                  {pieData.map((d, i) => (
+                    <li key={d.name} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="text-gray-600">{d.name}</span>
+                      </span>
+                      <span className="font-medium text-gray-800">{formatCurrency(d.value)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
