@@ -71,3 +71,25 @@ export function inRange(dateStr, start, end) {
   if (end && dateStr > end) return false
   return true
 }
+
+export function monthDays(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const count = new Date(y, m, 0).getDate()
+  return Array.from({ length: count }, (_, i) =>
+    `${yearMonth}-${String(i + 1).padStart(2, '0')}`
+  )
+}
+
+const LUNI_RO = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie',
+                 'Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie']
+
+export function formatMonthRo(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number)
+  return `${LUNI_RO[m - 1]} ${y}`
+}
+
+export function addMonths(yearMonth, delta) {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}

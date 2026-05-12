@@ -4,23 +4,22 @@ import { supabase } from '../lib/supabase'
 const AppContext = createContext(null)
 
 const FILIALE_IMPLICITE = ['Lunca Bâcului', 'Centru', 'Sîngera', 'Orhei', 'Мойка 5']
-const CATEGORII_IMPLICITE = ['Salariu', 'Vânzări', 'Chirie', 'Utilități', 'Consumabile', 'Marketing', 'Altele']
+const CATEGORII_IMPLICITE = ['Salariu', 'Chirie', 'Utilități', 'Consumabile', 'Combustibil', 'Reparații', 'Marketing', 'Altele']
 
 export function AppProvider({ children }) {
-  const [transactions, setTransactions] = useState([])
+  const [entries, setEntries] = useState([])
   const [branches, setBranches] = useState(FILIALE_IMPLICITE)
   const [categories, setCategories] = useState(CATEGORII_IMPLICITE)
   const [loading, setLoading] = useState(true)
   const [eroare, setEroare] = useState(null)
 
-  const fetchTransactions = useCallback(async () => {
+  const fetchEntries = useCallback(async () => {
     const { data, error } = await supabase
-      .from('transactions')
+      .from('daily_entries')
       .select('*')
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
+      .order('date', { ascending: true })
     if (error) { setEroare(error.message); return }
-    setTransactions(data ?? [])
+    setEntries(data ?? [])
   }, [])
 
   const fetchSettings = useCallback(async () => {
@@ -35,37 +34,52 @@ export function AppProvider({ children }) {
   useEffect(() => {
     async function init() {
       setLoading(true)
-      await Promise.all([fetchTransactions(), fetchSettings()])
+      await Promise.all([fetchEntries(), fetchSettings()])
       setLoading(false)
     }
     init()
 
     const canal = supabase
       .channel('sync-global')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchTransactions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_entries' }, fetchEntries)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .subscribe()
 
     return () => supabase.removeChannel(canal)
-  }, [fetchTransactions, fetchSettings])
+  }, [fetchEntries, fetchSettings])
 
-  async function addTransaction(tx) {
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([{ ...tx }])
-      .select()
-      .single()
-    if (error) { setEroare(error.message); return }
-    setTransactions(prev => [data, ...prev])
+  function getEntry(date, branch) {
+    return entries.find(e => e.date === date && e.branch === branch)
   }
 
-  async function deleteTransaction(id) {
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
+  async function saveEntry(date, branch, incasare, expenses) {
+    const existing = getEntry(date, branch)
+    const payload = { date, branch, incasare: incasare || 0, expenses: expenses || [] }
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('daily_entries')
+        .update({ incasare: payload.incasare, expenses: payload.expenses })
+        .eq('id', existing.id)
+        .select()
+        .single()
+      if (error) { setEroare(error.message); return }
+      setEntries(prev => prev.map(e => e.id === existing.id ? data : e))
+    } else {
+      const { data, error } = await supabase
+        .from('daily_entries')
+        .insert([payload])
+        .select()
+        .single()
+      if (error) { setEroare(error.message); return }
+      setEntries(prev => [...prev, data])
+    }
+  }
+
+  async function deleteEntry(id) {
+    const { error } = await supabase.from('daily_entries').delete().eq('id', id)
     if (error) { setEroare(error.message); return }
-    setTransactions(prev => prev.filter(t => t.id !== id))
+    setEntries(prev => prev.filter(e => e.id !== id))
   }
 
   async function saveBranches(newList) {
@@ -98,13 +112,14 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      transactions,
+      entries,
       branches,
       categories,
       loading,
       eroare,
-      addTransaction,
-      deleteTransaction,
+      getEntry,
+      saveEntry,
+      deleteEntry,
       addBranch,
       removeBranch,
       addCategory,

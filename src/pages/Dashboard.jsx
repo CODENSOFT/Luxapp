@@ -1,137 +1,243 @@
-import { useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, PlusCircle } from 'lucide-react'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from 'recharts'
+import { Fragment, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
-import StatCard from '../components/StatCard'
-import TabelIntrari from '../components/TabelIntrari'
-import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, monthLabel, last6Months, inRange } from '../utils/dateUtils'
-import { sumBy, netProfit, byCategory, byMonthAndType } from '../utils/calcUtils'
-import SelectorPerioada, { FILTRE } from '../components/SelectorPerioada'
+import CellModal from '../components/CellModal'
+import { today, currentMonthKey, monthDays, formatMonthRo, addMonths } from '../utils/dateUtils'
 
-const PIE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
+const PALETTE = [
+  { cell: 'bg-pink-50',    head: 'bg-pink-200',    text: 'text-pink-900' },
+  { cell: 'bg-sky-50',     head: 'bg-sky-200',     text: 'text-sky-900' },
+  { cell: 'bg-emerald-50', head: 'bg-emerald-200', text: 'text-emerald-900' },
+  { cell: 'bg-violet-50',  head: 'bg-violet-200',  text: 'text-violet-900' },
+  { cell: 'bg-amber-50',   head: 'bg-amber-200',   text: 'text-amber-900' },
+  { cell: 'bg-red-50',     head: 'bg-red-200',     text: 'text-red-900' },
+  { cell: 'bg-teal-50',    head: 'bg-teal-200',    text: 'text-teal-900' },
+]
+
+const CAT_CLR = {
+  'Salariu':     'bg-blue-100 text-blue-700',
+  'Chirie':      'bg-violet-100 text-violet-700',
+  'Utilități':   'bg-orange-100 text-orange-700',
+  'Consumabile': 'bg-emerald-100 text-emerald-700',
+  'Combustibil': 'bg-amber-100 text-amber-700',
+  'Reparații':   'bg-red-100 text-red-700',
+  'Marketing':   'bg-pink-100 text-pink-700',
+  'Altele':      'bg-gray-100 text-gray-600',
+}
+
+function n(val) {
+  if (!val) return ''
+  return Number(val).toLocaleString('ro-MD', { maximumFractionDigits: 2 })
+}
 
 export default function Dashboard({ onMenuClick }) {
-  const { transactions, branches } = useApp()
-  const [filter, setFilter] = useState('luna')
-  const [branchFilter, setBranchFilter] = useState('toate')
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const { branches, getEntry } = useApp()
+  const [month, setMonth] = useState(currentMonthKey)
+  const [modal, setModal] = useState(null)
 
-  function getRange() {
-    if (filter === 'luna') return getMonthRange()
-    if (filter === 'saptamana') return getWeekRange()
-    if (filter === 'azi') return getTodayRange()
-    if (filter === 'custom') return { start: customStart, end: customEnd }
-    return { start: '', end: '' }
+  const days = monthDays(month)
+  const todayStr = today()
+
+  function calc(date, branch) {
+    const e = getEntry(date, branch)
+    if (!e) return { inc: 0, av: 0, exps: [], net: 0, has: false }
+    const av = (e.expenses || []).reduce((s, x) => s + (Number(x.amount) || 0), 0)
+    const inc = Number(e.incasare) || 0
+    return { inc, av, exps: e.expenses || [], net: inc - av, has: true }
   }
 
-  const { start, end } = getRange()
-  const filtered = transactions.filter(t => {
-    const inBranch = branchFilter === 'toate' || t.branch === branchFilter
-    return inBranch && inRange(t.date, start, end)
+  const monthlyTotals = branches.map(branch => {
+    let inc = 0, av = 0
+    days.forEach(d => {
+      const c = calc(d, branch)
+      inc += c.inc
+      av += c.av
+    })
+    return { branch, inc, av, net: inc - av }
   })
 
-  const income = sumBy(filtered, 'Venit')
-  const expense = sumBy(filtered, 'Cheltuială')
-  const net = netProfit(filtered)
-  const months = last6Months()
-  const monthlyData = byMonthAndType(transactions, months).map(d => ({ ...d, month: monthLabel(d.month) }))
-  const pieData = byCategory(filtered)
-  const filterLabel = FILTRE.find(f => f.key === filter)?.label ?? ''
-
-  const inputCls = "rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const th  = 'border border-gray-400 px-1.5 py-1.5 text-[11px] font-semibold whitespace-nowrap'
+  const td  = 'border border-gray-300 px-1.5 py-1 text-xs whitespace-nowrap'
+  const tdr = `${td} text-right tabular-nums`
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
-      <TopBar title="Panou Principal" onMenuClick={onMenuClick} />
+      <TopBar title="LuxWash" onMenuClick={onMenuClick} />
 
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-          <SelectorPerioada value={filter} onChange={setFilter} />
-          {filter === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2">
-              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customStart} onChange={e => setCustomStart(e.target.value)} />
-              <span className="text-gray-400 text-sm shrink-0">până la</span>
-              <input type="date" className={`${inputCls} flex-1 min-w-0`} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-            </div>
-          )}
-          <div className="flex gap-2 sm:ml-auto">
-            <select className={`${inputCls} flex-1 sm:flex-none`} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
-              <option value="toate">Toate Filialele</option>
-              {branches.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            <button
-              onClick={() => setShowForm(v => !v)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-            >
-              <PlusCircle size={16} />
-              <span className="hidden xs:inline">Adaugă Intrare</span>
-              <span className="xs:hidden">Adaugă</span>
-            </button>
-          </div>
+      {modal && (
+        <CellModal
+          date={modal.date}
+          branch={modal.branch}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      <div className="p-3 sm:p-5">
+        {/* Month navigation */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <button
+            onClick={() => setMonth(m => addMonths(m, -1))}
+            className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <ChevronLeft size={18} className="text-gray-600" />
+          </button>
+          <span className="text-base font-bold text-gray-900 min-w-[160px] text-center select-none">
+            {formatMonthRo(month)}
+          </span>
+          <button
+            onClick={() => setMonth(m => addMonths(m, 1))}
+            className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <ChevronRight size={18} className="text-gray-600" />
+          </button>
         </div>
 
-        {showForm && <TabelIntrari onClose={() => setShowForm(false)} />}
+        {/* Excel table */}
+        <div className="overflow-x-auto rounded-lg border border-gray-400 shadow-sm bg-white">
+          <table className="border-collapse">
+            <thead>
+              {/* Row 1 – branch names */}
+              <tr>
+                <th rowSpan={2} className={`${th} bg-blue-900 text-white text-center w-9`}>
+                  Zi
+                </th>
+                {branches.map((branch, i) => (
+                  <th
+                    key={branch}
+                    colSpan={4}
+                    className={`${th} ${PALETTE[i % PALETTE.length].head} ${PALETTE[i % PALETTE.length].text} text-center`}
+                  >
+                    {branch}
+                  </th>
+                ))}
+                <th rowSpan={2} className={`${th} bg-yellow-300 text-yellow-900 text-center`}>
+                  Итог за день
+                </th>
+              </tr>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Total Venituri" amount={income} icon={TrendingUp} color="green" subtitle={filterLabel} />
-          <StatCard title="Total Cheltuieli" amount={expense} icon={TrendingDown} color="red" subtitle={filterLabel} />
-          <StatCard title="Profit Net" amount={net} icon={DollarSign} color={net >= 0 ? 'blue' : 'red'} subtitle={filterLabel} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Venituri vs Cheltuieli — Ultimele 6 Luni</h2>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={monthlyData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Venit" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Cheltuială" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Cheltuieli pe Categorie</h2>
-            {pieData.length === 0 ? (
-              <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">
-                Nu există date despre cheltuieli
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              {/* Row 2 – sub-column labels */}
+              <tr>
+                {branches.map((branch, i) => {
+                  const pal = PALETTE[i % PALETTE.length]
+                  return (
+                    <Fragment key={branch}>
+                      {['Încasare', 'Avans', 'Comentarii', 'Total'].map(col => (
+                        <th
+                          key={col}
+                          className={`${th} ${pal.head} ${pal.text} text-center font-medium text-[10px]`}
+                        >
+                          {col}
+                        </th>
                       ))}
-                    </Pie>
-                    <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <ul className="mt-2 space-y-1">
-                  {pieData.map((d, i) => (
-                    <li key={d.name} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                        <span className="text-gray-600">{d.name}</span>
-                      </span>
-                      <span className="font-medium text-gray-800">{formatCurrency(d.value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
+                    </Fragment>
+                  )
+                })}
+              </tr>
+            </thead>
+
+            <tbody>
+              {days.map(date => {
+                const day = date.slice(8)
+                const isToday = date === todayStr
+                const rowData = branches.map((branch, i) => ({ branch, i, ...calc(date, branch) }))
+                const dailyNet = rowData.reduce((s, d) => s + d.net, 0)
+                const hasDayData = rowData.some(d => d.has)
+
+                return (
+                  <tr key={date}>
+                    {/* Day cell */}
+                    <td className={`${tdr} text-center font-bold text-[11px] ${isToday ? 'bg-blue-200 text-blue-900' : 'bg-gray-100 text-gray-700'}`}>
+                      {day}
+                    </td>
+
+                    {rowData.map(({ branch, i, inc, av, exps, net, has }) => {
+                      const pal = PALETTE[i % PALETTE.length]
+                      const click = () => setModal({ date, branch })
+                      return (
+                        <Fragment key={branch}>
+                          {/* Încasare */}
+                          <td
+                            className={`${tdr} ${pal.cell} cursor-pointer hover:bg-black/5 min-w-[58px] ${inc && has ? 'text-green-700 font-medium' : 'text-gray-300'}`}
+                            onClick={click}
+                          >
+                            {has && inc ? n(inc) : ''}
+                          </td>
+
+                          {/* Avans */}
+                          <td
+                            className={`${tdr} ${pal.cell} cursor-pointer hover:bg-black/5 min-w-[58px] ${av && has ? 'text-red-600 font-medium' : 'text-gray-300'}`}
+                            onClick={click}
+                          >
+                            {has && av ? n(av) : ''}
+                          </td>
+
+                          {/* Comentarii */}
+                          <td
+                            className={`${td} ${pal.cell} cursor-pointer hover:bg-black/5 min-w-[80px]`}
+                            onClick={click}
+                          >
+                            <div className="flex flex-wrap gap-0.5">
+                              {exps.map((exp, j) => exp.category ? (
+                                <span
+                                  key={j}
+                                  className={`inline-block px-1 py-0.5 rounded text-[9px] leading-tight font-medium ${CAT_CLR[exp.category] || 'bg-gray-100 text-gray-600'}`}
+                                >
+                                  {exp.category}
+                                </span>
+                              ) : null)}
+                            </div>
+                          </td>
+
+                          {/* Total */}
+                          <td
+                            className={`${tdr} ${pal.cell} min-w-[58px] font-semibold ${!has ? '' : net >= 0 ? 'text-green-700' : 'text-red-600'}`}
+                          >
+                            {has ? n(net) : ''}
+                          </td>
+                        </Fragment>
+                      )
+                    })}
+
+                    {/* Daily total */}
+                    <td className={`${tdr} bg-yellow-50 font-bold min-w-[68px] text-[11px] ${hasDayData ? (dailyNet >= 0 ? 'text-green-700' : 'text-red-600') : ''}`}>
+                      {hasDayData ? n(dailyNet) : ''}
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {/* Monthly totals row */}
+              <tr className="border-t-2 border-gray-500">
+                <td className={`${tdr} text-center font-bold text-[10px] bg-gray-200 text-gray-800`}>
+                  TOTAL
+                </td>
+                {monthlyTotals.map(({ branch, inc, av, net }, i) => {
+                  const pal = PALETTE[i % PALETTE.length]
+                  const hasM = inc > 0 || av > 0
+                  return (
+                    <Fragment key={branch}>
+                      <td className={`${tdr} ${pal.head} font-bold text-green-700`}>{hasM && inc ? n(inc) : ''}</td>
+                      <td className={`${tdr} ${pal.head} font-bold text-red-600`}>{hasM && av ? n(av) : ''}</td>
+                      <td className={`${td}  ${pal.head}`} />
+                      <td className={`${tdr} ${pal.head} font-bold ${net >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                        {hasM ? n(net) : ''}
+                      </td>
+                    </Fragment>
+                  )
+                })}
+                {(() => {
+                  const grandNet = monthlyTotals.reduce((s, t) => s + t.net, 0)
+                  const hasAny = monthlyTotals.some(t => t.inc > 0 || t.av > 0)
+                  return (
+                    <td className={`${tdr} bg-yellow-200 font-bold text-sm ${grandNet >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                      {hasAny ? n(grandNet) : ''}
+                    </td>
+                  )
+                })()}
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

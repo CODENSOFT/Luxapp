@@ -10,15 +10,14 @@ import Settings from './pages/Settings'
 import { useApp } from './context/AppContext'
 import { supabaseConfigured } from './lib/supabase'
 
-const SQL_CREARE = `create table public.transactions (
+const SQL_CREARE = `create table public.daily_entries (
   id uuid primary key default gen_random_uuid(),
-  type text not null,
-  branch text not null,
-  category text default '',
-  amount numeric not null,
   date date not null,
-  description text default '',
-  created_at timestamptz default now()
+  branch text not null,
+  incasare numeric default 0,
+  expenses jsonb default '[]',
+  created_at timestamptz default now(),
+  constraint daily_entries_date_branch_key unique (date, branch)
 );
 
 create table public.settings (
@@ -27,11 +26,13 @@ create table public.settings (
 );
 
 insert into public.settings (key, value) values
-  ('categories', '["Salariu","Vânzări","Chirie","Utilități","Consumabile","Marketing","Altele"]');
+  ('categories', '["Salariu","Chirie","Utilități","Consumabile","Combustibil","Reparații","Marketing","Altele"]'),
+  ('branches', '["Lunca Bâcului","Centru","Sîngera","Orhei","Мойка 5"]')
+on conflict (key) do nothing;
 
-alter table public.transactions enable row level security;
+alter table public.daily_entries enable row level security;
 alter table public.settings enable row level security;
-create policy "Acces total" on public.transactions for all using (true) with check (true);
+create policy "Acces total" on public.daily_entries for all using (true) with check (true);
 create policy "Acces total" on public.settings for all using (true) with check (true);`
 
 function ButonCopiere({ text }) {

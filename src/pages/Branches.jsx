@@ -5,11 +5,10 @@ import {
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
 import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, inRange } from '../utils/dateUtils'
-import { sumBy } from '../utils/calcUtils'
 import SelectorPerioada from '../components/SelectorPerioada'
 
 export default function Branches({ onMenuClick }) {
-  const { transactions, branches } = useApp()
+  const { entries, branches } = useApp()
   const [filter, setFilter] = useState('luna')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -23,12 +22,13 @@ export default function Branches({ onMenuClick }) {
   }
 
   const { start, end } = getRange()
-  const filtered = transactions.filter(t => inRange(t.date, start, end))
+  const filtered = entries.filter(e => inRange(e.date, start, end))
 
   const stats = branches.map(branch => {
-    const txs = filtered.filter(t => t.branch === branch)
-    const income = sumBy(txs, 'Venit')
-    const expense = sumBy(txs, 'Cheltuială')
+    const branchEntries = filtered.filter(e => e.branch === branch)
+    const income = branchEntries.reduce((s, e) => s + (Number(e.incasare) || 0), 0)
+    const expense = branchEntries.reduce((s, e) =>
+      s + (e.expenses || []).reduce((s2, x) => s2 + (Number(x.amount) || 0), 0), 0)
     return { branch, income, expense, net: income - expense }
   })
 
@@ -56,7 +56,7 @@ export default function Branches({ onMenuClick }) {
               <h3 className="text-sm font-semibold text-gray-900 mb-4 truncate">{s.branch}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Venituri</span>
+                  <span className="text-xs text-gray-500">Încasări</span>
                   <span className="text-sm font-semibold text-green-600">{formatCurrency(s.income)}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -64,7 +64,7 @@ export default function Branches({ onMenuClick }) {
                   <span className="text-sm font-semibold text-red-600">{formatCurrency(s.expense)}</span>
                 </div>
                 <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Profit Net</span>
+                  <span className="text-xs text-gray-500">Net</span>
                   <span className={`text-sm font-bold ${s.net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                     {formatCurrency(s.net)}
                   </span>
@@ -88,9 +88,9 @@ export default function Branches({ onMenuClick }) {
                 <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="income" name="Venituri" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" name="Încasări" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" name="Cheltuieli" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="net" name="Profit Net" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="net" name="Net" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -101,7 +101,7 @@ export default function Branches({ onMenuClick }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  {['Filială', 'Total Venituri', 'Total Cheltuieli', 'Profit Net'].map(h => (
+                  {['Filială', 'Total Încasări', 'Total Cheltuieli', 'Net'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       {h}
                     </th>
