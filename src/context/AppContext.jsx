@@ -19,6 +19,7 @@ export function AppProvider({ children }) {
       .select('*')
       .order('date', { ascending: true })
     if (error) { setEroare(error.message); return }
+    setEroare(null)
     setEntries(data ?? [])
   }, [])
 
@@ -53,27 +54,19 @@ export function AppProvider({ children }) {
   }
 
   async function saveEntry(date, branch, incasare, expenses) {
-    const existing = getEntry(date, branch)
     const payload = { date, branch, incasare: incasare || 0, expenses: expenses || [] }
-
-    if (existing) {
-      const { data, error } = await supabase
-        .from('daily_entries')
-        .update({ incasare: payload.incasare, expenses: payload.expenses })
-        .eq('id', existing.id)
-        .select()
-        .single()
-      if (error) { setEroare(error.message); return }
-      setEntries(prev => prev.map(e => e.id === existing.id ? data : e))
-    } else {
-      const { data, error } = await supabase
-        .from('daily_entries')
-        .insert([payload])
-        .select()
-        .single()
-      if (error) { setEroare(error.message); return }
-      setEntries(prev => [...prev, data])
-    }
+    const { data, error } = await supabase
+      .from('daily_entries')
+      .upsert(payload, { onConflict: 'date,branch' })
+      .select()
+      .single()
+    if (error) { setEroare(error.message); return }
+    setEroare(null)
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.date === date && e.branch === branch)
+      if (idx >= 0) return prev.map((e, i) => i === idx ? data : e)
+      return [...prev, data]
+    })
   }
 
   async function deleteEntry(id) {
