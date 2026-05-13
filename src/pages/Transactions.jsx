@@ -90,7 +90,10 @@ export default function Transactions({ onMenuClick }) {
         .filter(e => inRange(e.date, startDate, endDate))
         .flatMap(e =>
           (e.expenses || [])
-            .filter(exp => (exp.comentariu || '').toLowerCase().includes(empTrimmed))
+            .filter(exp =>
+              (exp.comentariu || '').toLowerCase().includes(empTrimmed) ||
+              (exp.category || '').toLowerCase().includes(empTrimmed)
+            )
             .map(exp => ({
               date: e.date,
               branch: e.branch,
@@ -167,7 +170,7 @@ export default function Transactions({ onMenuClick }) {
 
           {empTrimmed && (
             empLines.length === 0 ? (
-              <p className="text-sm text-blue-500">Nicio cheltuială cu comentariul „{empQuery.trim()}" în perioada selectată.</p>
+              <p className="text-sm text-blue-500">Nicio cheltuială cu „{empQuery.trim()}" în categorie sau comentariu{(startDate || endDate) ? ' pentru perioada selectată' : ''}.</p>
             ) : (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-3">
@@ -227,7 +230,7 @@ export default function Transactions({ onMenuClick }) {
 
           {!empTrimmed && (
             <p className="text-xs text-blue-400">
-              Introduceți numele din comentariul cheltuielii (ex: „Radu" din „Avans Radu") pentru a vedea totalul avansurilor pe perioada selectată.
+              Introduceți un nume (ex: „Radu") — caută în categoria și comentariul fiecărei cheltuieli.
             </p>
           )}
         </div>
