@@ -354,7 +354,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
 
       {/* ── Tabel ─────────────────────────────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3 pt-2">
-        <div className="mx-auto w-max min-w-full max-w-none rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/4">
+        <div className="mx-auto w-max max-w-none rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/4">
         <table className="min-w-max border-collapse text-[13px]">
           <thead>
             <tr style={{ height: hRow1 }}>
