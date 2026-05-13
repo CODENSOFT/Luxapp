@@ -61,7 +61,7 @@ function cleanExpenseLines(lines) {
 }
 
 /** Avans: editare directă în tabel — Enter = rând nou + salvare (fără „cartonaș” / modal). */
-function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry }) {
+function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry, compact }) {
   const [lines, setLines] = useState(() => linesFromExpenses(initialExpenses))
   const amountRefs = useRef([])
   const linesRef = useRef(lines)
@@ -121,8 +121,9 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
     await persist(linesRef.current)
   }
 
-  const inpAmt =
-    'flex-1 bg-white text-right text-[12px] px-2 py-1.5 rounded-md border border-slate-200 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 tabular-nums placeholder:text-slate-400'
+  const inpAmt = compact
+    ? 'flex-1 bg-white text-right text-[11px] px-1 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 tabular-nums placeholder:text-slate-300'
+    : 'flex-1 bg-white text-right text-[12px] px-2 py-1.5 rounded-md border border-slate-200 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 tabular-nums placeholder:text-slate-400'
 
   return (
     <div
@@ -167,7 +168,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
   )
 }
 
-function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry }) {
+function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry, compact }) {
   const [drafts, setDrafts] = useState(() => (initialExpenses || []).map(e => e.comentariu || ''))
   const draftsRef = useRef(drafts)
   const skipSync  = useRef(false)
@@ -187,7 +188,9 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
     await saveEntry(dateStr, branch, parseFloat(incValue) || 0, updated)
   }
 
-  const inpCls = 'w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1.5 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
+  const inpCls = compact
+    ? 'w-full min-w-0 rounded border border-transparent bg-white/60 px-1 py-1 text-[10px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
+    : 'w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1.5 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
@@ -208,7 +211,7 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
       ))}
       {/* spacer matches AvansCell's trailing empty row */}
       <input type="text" readOnly tabIndex={-1} aria-hidden="true"
-             className="w-full min-w-[7rem] rounded-md border border-transparent bg-transparent px-1.5 py-1.5 text-[11px] pointer-events-none opacity-0" />
+             className={`w-full rounded-md border border-transparent bg-transparent pointer-events-none opacity-0 ${compact ? 'px-1 py-1 text-[10px]' : 'px-1.5 py-1.5 text-[11px]'}`} />
     </div>
   )
 }
@@ -269,6 +272,20 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
 
   const border   = '1px solid rgba(0,0,0,.1)'
   const borderHd = '1px solid rgba(0,0,0,.18)'
+
+  // ── responsive layout ────────────────────────────────────────────
+  const m       = isMobile
+  const dayW    = m ? 36  : 56
+  const incW    = m ? 68  : 92
+  const avW     = m ? 96  : 188
+  const commW   = m ? 82  : 128
+  const netW    = m ? 58  : 92
+  const cellP   = m ? '2px 3px' : '4px 6px'
+  const hRow1   = m ? 28 : ROW1
+  const hRow2   = m ? 26 : ROW2
+  const incCls  = m
+    ? 'w-full bg-white/50 text-right text-[11px] px-1 py-0.5 outline-none rounded border border-transparent focus:border-blue-400 focus:bg-white tabular-nums'
+    : N
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#f1f5f9' }}>
@@ -340,19 +357,17 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         <div className="mx-auto w-max min-w-full max-w-none rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/4">
         <table className="min-w-max border-collapse text-[13px]">
           <thead>
-            <tr style={{ height: ROW1 }}>
+            <tr style={{ height: hRow1 }}>
               <th rowSpan={2} scope="col" style={{
                 position: 'sticky', top: 0, left: 0, zIndex: 50,
                 background: '#1e3a5f', color: '#fff',
-                border: '1px solid #334d6e', padding: '6px 10px',
-                textAlign: 'center', minWidth: 56, fontWeight: 700, fontSize: 11,
+                border: '1px solid #334d6e', padding: m ? '4px 6px' : '6px 10px',
+                textAlign: 'center', minWidth: dayW, fontWeight: 700, fontSize: m ? 10 : 11,
                 boxShadow: '2px 0 6px rgba(0,0,0,.12)',
                 verticalAlign: 'middle',
               }}>
                 <span className="block leading-tight">Ziua</span>
-                <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/70">
-                  data
-                </span>
+                {!m && <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/70">data</span>}
               </th>
 
               {activeBranches.map((br) => (
@@ -360,8 +375,8 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                   position: 'sticky', top: 0, zIndex: 20,
                   background: '#1e3a5f', color: '#fff',
                   border: '1px solid #334d6e',
-                  padding: '6px 12px', textAlign: 'center',
-                  fontWeight: 700, fontSize: 12,
+                  padding: m ? '4px 6px' : '6px 12px', textAlign: 'center',
+                  fontWeight: 700, fontSize: m ? 10 : 12,
                   letterSpacing: '0.02em',
                 }}>{branchTitleCase(br)}</th>
               ))}
@@ -383,30 +398,28 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
               )}
             </tr>
 
-            <tr style={{ height: ROW2, boxShadow: '0 1px 0 0 rgba(15,23,42,0.08)' }}>
+            <tr style={{ height: hRow2, boxShadow: '0 1px 0 0 rgba(15,23,42,0.08)' }}>
               {activeBranches.map((br, i) => {
                 const h = hdr(br, i)
                 const subCols = [
-                  { label: 'Încasare', sub: 'MDL încasați', w: 92 },
-                  { label: 'Avans', sub: 'Cheltuieli · Enter = rând nou', w: 188, title: 'După sumă validă, Enter adaugă următoarea cheltuială.' },
-                  { label: 'Comentarii', sub: 'notă per cheltuială', w: 128 },
-                  { label: 'Rămâne', sub: 'Încasare − cheltuieli', w: 92 },
+                  { label: 'Încasare', sub: 'MDL',        w: incW  },
+                  { label: 'Avans',    sub: 'cheltuieli', w: avW   },
+                  { label: 'Comentarii', sub: 'notă',     w: commW },
+                  { label: 'Rămâne',  sub: 'net',         w: netW  },
                 ]
                 return (
                   <Fragment key={br}>
-                    {subCols.map(({ label, sub, w, title }) => (
-                      <th key={`${br}-${label}`} scope="col" title={title} style={{
-                        position: 'sticky', top: ROW1, zIndex: 20,
+                    {subCols.map(({ label, sub, w }) => (
+                      <th key={`${br}-${label}`} scope="col" style={{
+                        position: 'sticky', top: hRow1, zIndex: 20,
                         background: h, border: borderHd,
-                        padding: '6px 8px', textAlign: 'center',
-                        color: '#1e293b', fontWeight: 600, fontSize: 11,
+                        padding: m ? '3px 4px' : '6px 8px', textAlign: 'center',
+                        color: '#1e293b', fontWeight: 600, fontSize: m ? 10 : 11,
                         minWidth: w, letterSpacing: '.01em',
                         verticalAlign: 'middle', lineHeight: 1.25,
                       }}>
                         <span className="block normal-case tracking-tight">{label}</span>
-                        <span className="mt-0.5 block text-[9px] font-normal text-slate-600 normal-case tracking-normal">
-                          {sub}
-                        </span>
+                        {!m && <span className="mt-0.5 block text-[9px] font-normal text-slate-600 normal-case tracking-normal">{sub}</span>}
                       </th>
                     ))}
                   </Fragment>
@@ -431,16 +444,14 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     position: 'sticky', left: 0, zIndex: 10,
                     background: isToday ? '#DBEAFE' : '#f8fafc',
                     border: '1px solid #e2e8f0',
-                    textAlign: 'center', padding: '6px 8px',
+                    textAlign: 'center', padding: m ? '4px 4px' : '6px 8px',
                     boxShadow: '2px 0 5px rgba(0,0,0,.05)',
-                    verticalAlign: 'middle',
+                    verticalAlign: 'middle', minWidth: dayW,
                   }}>
-                    <span className={`block text-[15px] tabular-nums leading-none ${isToday ? 'font-extrabold text-blue-700' : 'font-bold text-slate-700'}`}>
+                    <span className={`block tabular-nums leading-none ${m ? 'text-[13px]' : 'text-[15px]'} ${isToday ? 'font-extrabold text-blue-700' : 'font-bold text-slate-700'}`}>
                       {day}
                     </span>
-                    <span className={`mt-1 block text-[10px] font-medium capitalize leading-none ${isToday ? 'text-blue-600/90' : 'text-slate-500'}`}>
-                      {wd}
-                    </span>
+                    {!m && <span className={`mt-1 block text-[10px] font-medium capitalize leading-none ${isToday ? 'text-blue-600/90' : 'text-slate-500'}`}>{wd}</span>}
                   </td>
 
                   {activeBranches.map((br, i) => {
@@ -452,25 +463,18 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
 
                     return (
                       <Fragment key={br}>
-                        <td className="align-top" style={{ background: bgc, border, padding: '4px 6px', minWidth: 92 }}>
+                        <td className="align-top" style={{ background: bgc, border, padding: cellP, minWidth: incW }}>
                           <input
                             type="number" min="0" step="0.01" inputMode="decimal"
                             value={inc} placeholder="0"
                             aria-label={`Încasare ${branchTitleCase(br)}, ziua ${day}`}
                             onChange={e => setInc(day, br, e.target.value)}
                             onBlur={e => saveIncOnBlur(day, br, e.target.value)}
-                            className={N}
+                            className={incCls}
                           />
                         </td>
 
-                        <td
-                          className="align-top"
-                          style={{
-                            background: bgc, border,
-                            minWidth: 188, verticalAlign: 'top',
-                            padding: '4px 6px',
-                          }}
-                        >
+                        <td className="align-top" style={{ background: bgc, border, minWidth: avW, verticalAlign: 'top', padding: cellP }}>
                           <AvansCell
                             key={`${month}-${day}-${br}`}
                             dateStr={`${month}-${day}`}
@@ -481,13 +485,11 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                               (exList || []).map(e => [e.amount, e.category, e.comentariu || ''])
                             )}
                             saveEntry={saveEntry}
+                            compact={m}
                           />
                         </td>
 
-                        <td
-                          className="align-top"
-                          style={{ background: bgc, border, minWidth: 128, padding: '4px 6px', verticalAlign: 'top' }}
-                        >
+                        <td className="align-top" style={{ background: bgc, border, minWidth: commW, padding: cellP, verticalAlign: 'top' }}>
                           <ComentariiCell
                             key={`comm-${month}-${day}-${br}`}
                             dateStr={`${month}-${day}`}
@@ -498,15 +500,17 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                               (exList || []).map(e => [e.amount, e.category, e.comentariu || ''])
                             )}
                             saveEntry={saveEntry}
+                            compact={m}
                           />
                         </td>
 
                         <td className="tabular-nums" style={{
-                          background: bgc, border, minWidth: 92,
-                          textAlign: 'right', padding: '8px 10px', fontWeight: 600, fontSize: 13,
+                          background: bgc, border, minWidth: netW,
+                          textAlign: 'right', padding: m ? '5px 5px' : '8px 10px',
+                          fontWeight: 600, fontSize: m ? 11 : 13,
                           verticalAlign: 'middle', whiteSpace: 'nowrap',
                           color: !hc ? '#cbd5e1' : net >= 0 ? '#15803d' : '#dc2626',
-                        }} title={hc ? 'Încasare minus total cheltuieli (avans), această zi și filială' : ''}>
+                        }}>
                           {hc ? fmt(net) : '—'}
                         </td>
                       </Fragment>
@@ -534,33 +538,31 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 position: 'sticky', left: 0, zIndex: 10,
                 background: '#334155', color: '#f8fafc',
                 border: '1px solid #475569',
-                textAlign: 'center', padding: '8px 10px',
-                fontWeight: 800, fontSize: 11,
+                textAlign: 'center', padding: m ? '4px 4px' : '8px 10px',
+                fontWeight: 800, fontSize: m ? 9 : 11,
                 boxShadow: '2px 0 5px rgba(0,0,0,.1)',
-                verticalAlign: 'middle',
+                verticalAlign: 'middle', minWidth: dayW,
               }}>
-                <span className="block">Total lună</span>
-                <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wide text-slate-300">
-                  pe coloană
-                </span>
+                <span className="block">{m ? 'Total' : 'Total lună'}</span>
+                {!m && <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wide text-slate-300">pe coloană</span>}
               </td>
 
               {activeBranches.map((br, i) => {
                 const h  = hdr(br, i)
                 const ci = colInc(br), ca = colAv(br), cn = colNet(br)
                 const hm = ci > 0 || ca > 0
+                const tp = m ? '4px 5px' : '8px 10px'
+                const tf = m ? 10 : 12
                 return (
                   <Fragment key={br}>
-                    <td title="Total încasări în luna afișată, această filială" style={{ background: h, border: borderHd, textAlign: 'right', padding: '8px 10px', fontWeight: 700, fontSize: 12, color: '#15803d', whiteSpace: 'nowrap' }}>
+                    <td style={{ background: h, border: borderHd, textAlign: 'right', padding: tp, fontWeight: 700, fontSize: tf, color: '#15803d', whiteSpace: 'nowrap' }}>
                       {hm && ci ? ci.toLocaleString('ro-MD', { maximumFractionDigits: 2 }) : '—'}
                     </td>
-                    <td title="Total cheltuieli (avans) în lună, această filială" style={{ background: h, border: borderHd, textAlign: 'right', padding: '8px 10px', fontWeight: 700, fontSize: 12, color: '#b91c1c', whiteSpace: 'nowrap' }}>
+                    <td style={{ background: h, border: borderHd, textAlign: 'right', padding: tp, fontWeight: 700, fontSize: tf, color: '#b91c1c', whiteSpace: 'nowrap' }}>
                       {hm && ca ? ca.toLocaleString('ro-MD', { maximumFractionDigits: 2 }) : '—'}
                     </td>
-                    <td title="Comentariile se deschid din zilele individuale" style={{ background: h, border: borderHd, padding: '6px', fontSize: 10, color: '#64748b', textAlign: 'center' }}>
-                      —
-                    </td>
-                    <td title="Total «Rămâne» în lună (încasări − cheltuieli), filiala" style={{ background: h, border: borderHd, textAlign: 'right', padding: '8px 10px', fontWeight: 800, fontSize: 12, color: cn >= 0 ? '#15803d' : '#dc2626', whiteSpace: 'nowrap' }}>
+                    <td style={{ background: h, border: borderHd, padding: m ? '4px' : '6px', fontSize: 9, color: '#64748b', textAlign: 'center' }}>—</td>
+                    <td style={{ background: h, border: borderHd, textAlign: 'right', padding: tp, fontWeight: 800, fontSize: tf, color: cn >= 0 ? '#15803d' : '#dc2626', whiteSpace: 'nowrap' }}>
                       {hm ? fmt(cn) : '—'}
                     </td>
                   </Fragment>
