@@ -233,7 +233,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   const displayBranches = branchFilter ? [branchFilter] : tableBranches
   const [month,         setMonth]         = useState(() => initialMonth || currentMonthKey())
   const [incDraft,      setIncDraft]      = useState({})
-  const [saving,          setSaving]          = useState(false)
   const [mobileBranchIdx, setMobileBranchIdx] = useState(0)
   const [isMobile,      setIsMobile]     = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -277,22 +276,10 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
     setIncDraft({})
   }
 
-  async function handleSave() {
-    setSaving(true)
-    for (const dateStr of days) {
-      const day = dateStr.slice(8)
-      for (const br of displayBranches) {
-        const draft = incDraft[`${day}|${br}`]
-        if (draft !== undefined) {
-          const inc = parseFloat(draft) || 0
-          const existing = getEntry(dateStr, br)
-          await saveEntry(dateStr, br, inc, existing?.expenses || [])
-        }
-      }
-    }
-    setSaving(false)
-    setIncDraft({})
-    onClose()
+  async function saveIncOnBlur(day, br, domValue) {
+    const existing = getEntry(`${month}-${day}`, br)
+    await saveEntry(`${month}-${day}`, br, parseFloat(domValue) || 0, existing?.expenses || [])
+    setIncDraft(p => { const n = { ...p }; delete n[`${day}|${br}`]; return n })
   }
 
   const border   = '1px solid rgba(0,0,0,.1)'
@@ -328,10 +315,10 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
           </button>
         </div>
 
-        <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors">
+        <button onClick={onClose}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-xs font-semibold transition-colors">
           <Check size={14} />
-          {saving ? 'Salvez…' : 'Salvează'}
+          Închide
         </button>
       </div>
 
@@ -484,6 +471,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                             value={inc} placeholder="0"
                             aria-label={`Încasare ${branchTitleCase(br)}, ziua ${day}`}
                             onChange={e => setInc(day, br, e.target.value)}
+                            onBlur={e => saveIncOnBlur(day, br, e.target.value)}
                             className={N}
                           />
                         </td>
@@ -609,14 +597,10 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         </div>
       </div>
 
-      <div className="shrink-0 flex flex-col gap-2 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs leading-relaxed text-slate-500">
-          <p><strong className="text-slate-700">Avans / cheltuieli</strong> — salvare automată la fiecare modificare.</p>
-          <p className="mt-0.5"><strong className="text-slate-700">Încasare</strong> — se trimite la server la <strong className="text-slate-700">Salvează</strong> sau când închideți după editare.</p>
-        </div>
-        <button type="button" onClick={onClose} className="shrink-0 self-end text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline sm:self-auto">
-          Închide fereastra
-        </button>
+      <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-2.5">
+        <p className="text-xs text-slate-400">
+          Toate câmpurile se salvează automat când ieșiți din ele.
+        </p>
       </div>
 
     </div>
