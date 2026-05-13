@@ -5,6 +5,16 @@ import TopBar from '../components/TopBar'
 
 function ListaEtichete({ items, onRemove }) {
   const [confirmItem, setConfirmItem] = useState(null)
+  const [deleteCode, setDeleteCode] = useState('')
+  const [codeError, setCodeError] = useState(false)
+
+  function startDelete(item) { setConfirmItem(item); setDeleteCode(''); setCodeError(false) }
+  function cancelDelete()    { setConfirmItem(null); setDeleteCode(''); setCodeError(false) }
+  function confirmDelete(item) {
+    if (deleteCode === '1379') { onRemove(item); cancelDelete() }
+    else { setCodeError(true); setDeleteCode('') }
+  }
+
   return (
     <div className="flex flex-wrap gap-2 mt-3">
       {items.map(item => (
@@ -12,17 +22,22 @@ function ListaEtichete({ items, onRemove }) {
           <span className="truncate max-w-[160px] sm:max-w-none">{item}</span>
           {confirmItem === item ? (
             <>
-              <button
-                onClick={() => { onRemove(item); setConfirmItem(null) }}
-                className="shrink-0 text-red-500 hover:text-red-700 font-medium text-xs ml-1"
-              >
-                Șterge?
-              </button>
-              <button onClick={() => setConfirmItem(null)} className="shrink-0 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+              <input
+                type="password"
+                inputMode="numeric"
+                placeholder="Cod"
+                autoFocus
+                value={deleteCode}
+                onChange={e => { setDeleteCode(e.target.value); setCodeError(false) }}
+                onKeyDown={e => { if (e.key === 'Enter') confirmDelete(item); if (e.key === 'Escape') cancelDelete() }}
+                className={`w-14 text-xs px-1.5 py-0.5 rounded border outline-none focus:ring-1 focus:ring-red-400 ${codeError ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
+              />
+              <button onClick={() => confirmDelete(item)} className="shrink-0 text-red-500 hover:text-red-700 font-bold text-xs">✓</button>
+              <button onClick={cancelDelete} className="shrink-0 text-gray-400 hover:text-gray-600 text-xs">✕</button>
             </>
           ) : (
             <button
-              onClick={() => setConfirmItem(item)}
+              onClick={() => startDelete(item)}
               className="shrink-0 text-gray-400 hover:text-red-500 transition-colors ml-0.5"
             >
               <Trash2 size={13} />

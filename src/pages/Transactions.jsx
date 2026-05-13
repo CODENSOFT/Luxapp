@@ -81,7 +81,16 @@ export default function Transactions({ onMenuClick }) {
   const [endDate, setEndDate] = useState('')
   const [modal, setModal] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
+  const [deleteCode, setDeleteCode] = useState('')
+  const [codeError, setCodeError] = useState(false)
   const [empQuery, setEmpQuery] = useState('')
+
+  function startDelete(id) { setConfirmId(id); setDeleteCode(''); setCodeError(false) }
+  function cancelDelete()  { setConfirmId(null); setDeleteCode(''); setCodeError(false) }
+  function confirmDelete() {
+    if (deleteCode === '1379') { deleteEntry(confirmId); cancelDelete() }
+    else { setCodeError(true); setDeleteCode('') }
+  }
 
   // ── Raport avansuri angajat ───────────────────────────────────────
   const empTrimmed = empQuery.trim().toLowerCase()
@@ -293,20 +302,23 @@ export default function Transactions({ onMenuClick }) {
                             <Edit2 size={14} />
                           </button>
                           {confirmId === entry.id ? (
-                            <>
-                              <button
-                                onClick={() => { deleteEntry(entry.id); setConfirmId(null) }}
-                                className="text-xs text-red-600 hover:underline font-medium"
-                              >
-                                Confirmă
-                              </button>
-                              <button onClick={() => setConfirmId(null)} className="text-xs text-gray-500 hover:underline">
-                                Anulează
-                              </button>
-                            </>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="password"
+                                inputMode="numeric"
+                                placeholder="Cod"
+                                autoFocus
+                                value={deleteCode}
+                                onChange={e => { setDeleteCode(e.target.value); setCodeError(false) }}
+                                onKeyDown={e => { if (e.key === 'Enter') confirmDelete(); if (e.key === 'Escape') cancelDelete() }}
+                                className={`w-14 text-xs px-1.5 py-1 rounded border outline-none focus:ring-1 focus:ring-red-400 ${codeError ? 'border-red-400 bg-red-50 placeholder:text-red-300' : 'border-gray-300'}`}
+                              />
+                              <button onClick={confirmDelete} className="text-xs text-red-600 hover:text-red-800 font-bold">✓</button>
+                              <button onClick={cancelDelete} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                            </div>
                           ) : (
                             <button
-                              onClick={() => setConfirmId(entry.id)}
+                              onClick={() => startDelete(entry.id)}
                               className="text-gray-400 hover:text-red-500 transition-colors"
                             >
                               <Trash2 size={14} />
