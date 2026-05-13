@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Branches from './pages/Branches'
 import Settings from './pages/Settings'
+import LoginScreen from './components/LoginScreen'
 import { useApp } from './context/AppContext'
 import { supabaseConfigured } from './lib/supabase'
 
@@ -161,6 +162,16 @@ function Continut() {
 }
 
 export default function App() {
+  const [authenticated, setAuthenticated] = useState(
+    () => sessionStorage.getItem('lux_auth') === '1'
+  )
+
+  function handleLogin() {
+    sessionStorage.setItem('lux_auth', '1')
+    setAuthenticated(true)
+  }
+
+  if (!authenticated) return <LoginScreen onLogin={handleLogin} />
   if (!supabaseConfigured) return <EcranConfigurare />
   return <Continut />
 }
