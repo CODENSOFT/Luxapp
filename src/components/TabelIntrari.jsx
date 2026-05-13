@@ -190,7 +190,7 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
 
   const inpCls = compact
     ? 'w-full min-w-0 rounded border border-transparent bg-white/60 px-1 py-1 text-[10px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
-    : 'w-full min-w-0 rounded-md border border-transparent bg-white/60 px-1.5 py-1.5 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
+    : 'w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1.5 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
@@ -287,21 +287,8 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
     ? 'w-full bg-white/50 text-right text-[11px] px-1 py-0.5 outline-none rounded border border-transparent focus:border-blue-400 focus:bg-white tabular-nums'
     : N
 
-  // Desktop: compute column widths so all branches fit without horizontal scroll
-  const totalColW = showTotalCol ? 100 : 0
-  const DESKTOP_TARGET = 1390
-  const brBase = incW + avW + commW + netW
-  const perBranch = !m && activeBranches.length > 0
-    ? Math.floor((DESKTOP_TARGET - dayW - totalColW) / activeBranches.length)
-    : brBase
-  const incWd  = !m ? Math.floor(perBranch * incW  / brBase) : incW
-  const avWd   = !m ? Math.floor(perBranch * avW   / brBase) : avW
-  const commWd = !m ? Math.floor(perBranch * commW / brBase) : commW
-  const netWd  = !m ? (perBranch - Math.floor(perBranch * incW / brBase) - Math.floor(perBranch * avW / brBase) - Math.floor(perBranch * commW / brBase)) : netW
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center" style={{ background: '#f1f5f9' }}>
-    <div className="flex flex-col w-full h-full max-w-[1440px]">
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#f1f5f9' }}>
 
       {/* ── Top bar ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 py-2.5 shrink-0"
@@ -367,15 +354,15 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
 
       {/* ── Tabel ─────────────────────────────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3 pt-2">
-        <div className={`mx-auto ${m ? 'w-max min-w-full' : 'w-full'} max-w-none rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/4`}>
-        <table className={`${m ? 'min-w-max' : 'w-full'} border-collapse text-[13px]`} style={m ? undefined : { tableLayout: 'fixed' }}>
+        <div className="mx-auto w-max min-w-full max-w-none rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/4">
+        <table className="min-w-max border-collapse text-[13px]">
           <thead>
             <tr style={{ height: hRow1 }}>
               <th rowSpan={2} scope="col" style={{
                 position: 'sticky', top: 0, left: 0, zIndex: 50,
                 background: '#1e3a5f', color: '#fff',
                 border: '1px solid #334d6e', padding: m ? '4px 6px' : '6px 10px',
-                textAlign: 'center', [m ? 'minWidth' : 'width']: dayW, fontWeight: 700, fontSize: m ? 10 : 11,
+                textAlign: 'center', minWidth: dayW, fontWeight: 700, fontSize: m ? 10 : 11,
                 boxShadow: '2px 0 6px rgba(0,0,0,.12)',
                 verticalAlign: 'middle',
               }}>
@@ -400,7 +387,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                   background: '#b45309', color: '#fff',
                   border: '1px solid #92400e',
                   padding: '6px 12px', textAlign: 'center',
-                  [m ? 'minWidth' : 'width']: 100, fontWeight: 700, fontSize: 11,
+                  minWidth: 100, fontWeight: 700, fontSize: 11,
                   verticalAlign: 'middle',
                 }}>
                   <span className="block leading-tight">Total zi</span>
@@ -415,10 +402,10 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
               {activeBranches.map((br, i) => {
                 const h = hdr(br, i)
                 const subCols = [
-                  { label: 'Încasare', sub: 'MDL',        w: m ? incW  : incWd  },
-                  { label: 'Avans',    sub: 'cheltuieli', w: m ? avW   : avWd   },
-                  { label: 'Comentarii', sub: 'notă',     w: m ? commW : commWd },
-                  { label: 'Rămâne',  sub: 'net',         w: m ? netW  : netWd  },
+                  { label: 'Încasare', sub: 'MDL',        w: incW  },
+                  { label: 'Avans',    sub: 'cheltuieli', w: avW   },
+                  { label: 'Comentarii', sub: 'notă',     w: commW },
+                  { label: 'Rămâne',  sub: 'net',         w: netW  },
                 ]
                 return (
                   <Fragment key={br}>
@@ -428,7 +415,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                         background: h, border: borderHd,
                         padding: m ? '3px 4px' : '6px 8px', textAlign: 'center',
                         color: '#1e293b', fontWeight: 600, fontSize: m ? 10 : 11,
-                        [m ? 'minWidth' : 'width']: w, letterSpacing: '.01em',
+                        minWidth: w, letterSpacing: '.01em',
                         verticalAlign: 'middle', lineHeight: 1.25,
                       }}>
                         <span className="block normal-case tracking-tight">{label}</span>
@@ -459,7 +446,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     border: '1px solid #e2e8f0',
                     textAlign: 'center', padding: m ? '4px 4px' : '6px 8px',
                     boxShadow: '2px 0 5px rgba(0,0,0,.05)',
-                    verticalAlign: 'middle', [m ? 'minWidth' : 'width']: dayW,
+                    verticalAlign: 'middle', minWidth: dayW,
                   }}>
                     <span className={`block tabular-nums leading-none ${m ? 'text-[13px]' : 'text-[15px]'} ${isToday ? 'font-extrabold text-blue-700' : 'font-bold text-slate-700'}`}>
                       {day}
@@ -476,7 +463,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
 
                     return (
                       <Fragment key={br}>
-                        <td className="align-top" style={{ background: bgc, border, padding: cellP, ...(m ? { minWidth: incW } : {}) }}>
+                        <td className="align-top" style={{ background: bgc, border, padding: cellP, minWidth: incW }}>
                           <input
                             type="number" min="0" step="0.01" inputMode="decimal"
                             value={inc} placeholder="0"
@@ -487,7 +474,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                           />
                         </td>
 
-                        <td className="align-top" style={{ background: bgc, border, verticalAlign: 'top', padding: cellP, ...(m ? { minWidth: avW } : {}) }}>
+                        <td className="align-top" style={{ background: bgc, border, minWidth: avW, verticalAlign: 'top', padding: cellP }}>
                           <AvansCell
                             key={`${month}-${day}-${br}`}
                             dateStr={`${month}-${day}`}
@@ -502,7 +489,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                           />
                         </td>
 
-                        <td className="align-top" style={{ background: bgc, border, padding: cellP, verticalAlign: 'top', ...(m ? { minWidth: commW } : {}) }}>
+                        <td className="align-top" style={{ background: bgc, border, minWidth: commW, padding: cellP, verticalAlign: 'top' }}>
                           <ComentariiCell
                             key={`comm-${month}-${day}-${br}`}
                             dateStr={`${month}-${day}`}
@@ -518,7 +505,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                         </td>
 
                         <td className="tabular-nums" style={{
-                          background: bgc, border, ...(m ? { minWidth: netW } : {}),
+                          background: bgc, border, minWidth: netW,
                           textAlign: 'right', padding: m ? '5px 5px' : '8px 10px',
                           fontWeight: 600, fontSize: m ? 11 : 13,
                           verticalAlign: 'middle', whiteSpace: 'nowrap',
@@ -554,7 +541,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 textAlign: 'center', padding: m ? '4px 4px' : '8px 10px',
                 fontWeight: 800, fontSize: m ? 9 : 11,
                 boxShadow: '2px 0 5px rgba(0,0,0,.1)',
-                verticalAlign: 'middle', [m ? 'minWidth' : 'width']: dayW,
+                verticalAlign: 'middle', minWidth: dayW,
               }}>
                 <span className="block">{m ? 'Total' : 'Total lună'}</span>
                 {!m && <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wide text-slate-300">pe coloană</span>}
@@ -604,7 +591,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         </p>
       </div>
 
-    </div>
     </div>
   )
 }
