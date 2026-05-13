@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, PlusCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, PlusCircle, Table2 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -95,6 +95,13 @@ export default function Dashboard({ onMenuClick }) {
               <option value="toate">Toate Filialele</option>
               {branches.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              <Table2 size={16} />
+              <span>Tabel Principal</span>
+            </button>
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
