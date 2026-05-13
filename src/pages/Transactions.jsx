@@ -130,7 +130,7 @@ export default function Transactions({ onMenuClick }) {
         />
       )}
 
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4 max-w-[1440px] mx-auto w-full">
         {/* ── Filtre principale ───────────────────────────────────── */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[180px]">
