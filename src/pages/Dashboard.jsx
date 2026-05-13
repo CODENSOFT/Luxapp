@@ -26,10 +26,13 @@ function byCategory(entries) {
   const map = {}
   entries.forEach(e => {
     (e.expenses || []).forEach(exp => {
-      if (exp.category) map[exp.category] = (map[exp.category] || 0) + (Number(exp.amount) || 0)
+      const key = (exp.comentariu || exp.category || '').trim() || 'Altele'
+      if (Number(exp.amount) > 0) map[key] = (map[key] || 0) + Number(exp.amount)
     })
   })
-  return Object.entries(map).map(([name, value]) => ({ name, value }))
+  return Object.entries(map)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
 }
 
 function byMonthData(entries, months) {
