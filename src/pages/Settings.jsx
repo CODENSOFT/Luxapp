@@ -60,7 +60,7 @@ function FormularAdaugare({ placeholder, onAdd }) {
 }
 
 export default function Settings({ onMenuClick }) {
-  const { branches, categories, addBranch, removeBranch, addCategory, removeCategory } = useApp()
+  const { branches, addBranch, removeBranch } = useApp()
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
@@ -72,13 +72,6 @@ export default function Settings({ onMenuClick }) {
           <p className="text-sm text-gray-500 mt-1">Gestionați lista de filiale disponibile în aplicație.</p>
           <ListaEtichete items={branches} onRemove={removeBranch} />
           <FormularAdaugare placeholder="Nume filială nouă…" onAdd={addBranch} />
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-900">Categorii</h2>
-          <p className="text-sm text-gray-500 mt-1">Gestionați categoriile de venituri și cheltuieli.</p>
-          <ListaEtichete items={categories} onRemove={removeCategory} />
-          <FormularAdaugare placeholder="Nume categorie nouă…" onAdd={addCategory} />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
