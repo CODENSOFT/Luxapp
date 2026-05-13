@@ -305,12 +305,14 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
             <ChevronLeft size={15} />
           </button>
           <h1 className="text-white text-center select-none px-2">
-            <span className="block text-[15px] font-semibold tracking-tight">
-              {branchFilter ? branchTitleCase(branchFilter) : 'Încasări și cheltuieli (avans)'}
-            </span>
-            <span className="block text-[11px] font-normal text-white/75 mt-0.5">
+            <span className="block text-[18px] font-bold tracking-tight">
               {formatMonthRo(month)}
             </span>
+            {branchFilter && (
+              <span className="block text-[11px] font-normal text-white/70 mt-0.5">
+                {branchTitleCase(branchFilter)}
+              </span>
+            )}
           </h1>
           <button onClick={() => changeMonth(1)}
                   className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 transition-colors">
