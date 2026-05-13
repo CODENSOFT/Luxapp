@@ -271,11 +271,12 @@ export default function Transactions({ onMenuClick }) {
                       <td className={`px-4 py-3 font-bold whitespace-nowrap ${net >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                         {formatCurrency(net)}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 max-w-[200px]">
-                        <div className="flex flex-wrap gap-1">
+                      <td className="px-4 py-3 max-w-[220px]">
+                        <div className="flex flex-col gap-0.5">
                           {(entry.expenses || []).map((exp, j) => (
-                            <span key={j} className="text-xs bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
-                              {exp.category || '—'} {exp.amount > 0 ? `(${formatCurrency(exp.amount)})` : ''}
+                            <span key={j} className="text-xs leading-snug">
+                              <span className="font-semibold text-red-600 tabular-nums">{formatCurrency(exp.amount)}</span>
+                              {exp.comentariu ? <span className="text-gray-500"> · {exp.comentariu}</span> : null}
                             </span>
                           ))}
                         </div>

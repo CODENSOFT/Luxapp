@@ -61,7 +61,7 @@ function cleanExpenseLines(lines) {
 }
 
 /** Avans: editare directă în tabel — Enter = rând nou + salvare (fără „cartonaș” / modal). */
-function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry, categories }) {
+function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry }) {
   const [lines, setLines] = useState(() => linesFromExpenses(initialExpenses))
   const amountRefs = useRef([])
   const linesRef = useRef(lines)
@@ -122,9 +122,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
   }
 
   const inpAmt =
-    'w-[4.5rem] shrink-0 bg-white text-right text-[12px] px-2 py-1.5 rounded-md border border-slate-200 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 tabular-nums placeholder:text-slate-400'
-  const selCat =
-    'min-w-[5.25rem] flex-1 max-w-full text-[11px] bg-white border border-slate-200 rounded-md px-1.5 py-1.5 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300'
+    'flex-1 bg-white text-right text-[12px] px-2 py-1.5 rounded-md border border-slate-200 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 tabular-nums placeholder:text-slate-400'
 
   return (
     <div
@@ -134,10 +132,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
       aria-label="Cheltuieli / avans"
     >
       {lines.map((row, i) => (
-        <div
-          key={i}
-          className="flex items-stretch gap-1.5"
-        >
+        <div key={i} className="flex items-stretch gap-1.5">
           <input
             ref={el => { amountRefs.current[i] = el }}
             type="number"
@@ -152,21 +147,8 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
             onBlur={handleBlurPersist}
             className={inpAmt}
           />
-          <select
-            value={row.category}
-            onChange={e => setLine(i, 'category', e.target.value)}
-            onBlur={handleBlurPersist}
-            className={selCat}
-            title={row.category || 'Alegeți categoria'}
-            aria-label={`Categorie cheltuială ${i + 1}`}
-          >
-            <option value="">Categorie…</option>
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
           {(() => {
-            const lastEmpty = i === lines.length - 1 && !parseFloat(row.amount) && !row.category
+            const lastEmpty = i === lines.length - 1 && !parseFloat(row.amount)
             if (lastEmpty) return null
             return (
               <button
@@ -232,7 +214,7 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
 }
 
 export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
-  const { tableBranches, getEntry, saveEntry, categories } = useApp()
+  const { tableBranches, getEntry, saveEntry } = useApp()
   const displayBranches = branchFilter ? [branchFilter] : tableBranches
   const [month,         setMonth]         = useState(() => initialMonth || currentMonthKey())
   const [incDraft,      setIncDraft]      = useState({})
@@ -499,7 +481,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                               (exList || []).map(e => [e.amount, e.category, e.comentariu || ''])
                             )}
                             saveEntry={saveEntry}
-                            categories={categories}
                           />
                         </td>
 
