@@ -8,22 +8,22 @@ function ListaEtichete({ items, onRemove }) {
   return (
     <div className="flex flex-wrap gap-2 mt-3">
       {items.map(item => (
-        <span key={item} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm">
-          {item}
+        <span key={item} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm max-w-full">
+          <span className="truncate max-w-[160px] sm:max-w-none">{item}</span>
           {confirmItem === item ? (
             <>
               <button
                 onClick={() => { onRemove(item); setConfirmItem(null) }}
-                className="text-red-500 hover:text-red-700 font-medium text-xs ml-1"
+                className="shrink-0 text-red-500 hover:text-red-700 font-medium text-xs ml-1"
               >
                 Șterge?
               </button>
-              <button onClick={() => setConfirmItem(null)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+              <button onClick={() => setConfirmItem(null)} className="shrink-0 text-gray-400 hover:text-gray-600 text-xs">✕</button>
             </>
           ) : (
             <button
               onClick={() => setConfirmItem(item)}
-              className="text-gray-400 hover:text-red-500 transition-colors ml-0.5"
+              className="shrink-0 text-gray-400 hover:text-red-500 transition-colors ml-0.5"
             >
               <Trash2 size={13} />
             </button>
@@ -46,14 +46,14 @@ function FormularAdaugare({ placeholder, onAdd }) {
     <form onSubmit={handleSubmit} className="flex gap-2 mt-4">
       <input
         type="text"
-        className="flex-1 rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder={placeholder}
         value={value}
         onChange={e => setValue(e.target.value)}
       />
-      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+      <button type="submit" className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
         <Plus size={15} />
-        Adaugă
+        <span className="hidden sm:inline">Adaugă</span>
       </button>
     </form>
   )
@@ -66,21 +66,21 @@ export default function Settings({ onMenuClick }) {
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
       <TopBar title="Setări" onMenuClick={onMenuClick} />
 
-      <div className="p-6 space-y-6 max-w-2xl">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-2xl">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <h2 className="text-base font-semibold text-gray-900">Filiale</h2>
           <p className="text-sm text-gray-500 mt-1">Gestionați lista de filiale disponibile în aplicație.</p>
           <ListaEtichete items={branches} onRemove={removeBranch} />
           <FormularAdaugare placeholder="Nume filială nouă…" onAdd={addBranch} />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <h2 className="text-base font-semibold text-gray-900">Baza de Date</h2>
           <p className="text-sm text-gray-500 mt-1">
             Datele sunt salvate în cloud și sincronizate în timp real pe toate dispozitivele.
           </p>
           <div className="mt-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
             <span className="text-sm text-green-700 font-medium">Conectat la Supabase</span>
           </div>
         </div>
