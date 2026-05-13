@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { X, Check, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { currentMonthKey, formatMonthRo, monthDays, addMonths } from '../utils/dateUtils'
+import DeleteCodeModal from './DeleteCodeModal'
 
 const BRANCH_BG  = { 'Lunca Bâcului':'#FFD6D6','Centru':'#D6E4FF','Sîngera':'#D6FFD6','Orhei':'#E8D6FF','Мойка 5':'#FFFBD6' }
 const BRANCH_HDR = { 'Lunca Bâcului':'#FFC0C0','Centru':'#BFCFFF','Sîngera':'#BFEDBA','Orhei':'#D5BAFF','Мойка 5':'#FFE97A' }
@@ -63,6 +64,7 @@ function cleanExpenseLines(lines) {
 /** Avans: editare directă în tabel — Enter = rând nou + salvare (fără „cartonaș” / modal). */
 function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry, compact }) {
   const [lines, setLines] = useState(() => linesFromExpenses(initialExpenses))
+  const [pendingRemove, setPendingRemove] = useState(null)
   const amountRefs = useRef([])
   const linesRef = useRef(lines)
   const skipSync = useRef(false)
@@ -132,6 +134,12 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
       role="group"
       aria-label="Cheltuieli / avans"
     >
+      {pendingRemove !== null && (
+        <DeleteCodeModal
+          onConfirm={() => { removeLine(pendingRemove); setPendingRemove(null) }}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
       {lines.map((row, i) => (
         <div key={i} className="flex items-stretch gap-1.5">
           <input
@@ -155,7 +163,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
               <button
                 type="button"
                 title="Șterge această cheltuială"
-                onClick={() => removeLine(i)}
+                onClick={() => setPendingRemove(i)}
                 className="shrink-0 self-center rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
               >
                 <Trash2 size={14} strokeWidth={2} />

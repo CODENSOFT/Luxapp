@@ -2,51 +2,33 @@ import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
+import DeleteCodeModal from '../components/DeleteCodeModal'
 
 function ListaEtichete({ items, onRemove }) {
-  const [confirmItem, setConfirmItem] = useState(null)
-  const [deleteCode, setDeleteCode] = useState('')
-  const [codeError, setCodeError] = useState(false)
-
-  function startDelete(item) { setConfirmItem(item); setDeleteCode(''); setCodeError(false) }
-  function cancelDelete()    { setConfirmItem(null); setDeleteCode(''); setCodeError(false) }
-  function confirmDelete(item) {
-    if (deleteCode === '1379') { onRemove(item); cancelDelete() }
-    else { setCodeError(true); setDeleteCode('') }
-  }
-
+  const [deleteTarget, setDeleteTarget] = useState(null)
   return (
-    <div className="flex flex-wrap gap-2 mt-3">
-      {items.map(item => (
-        <span key={item} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm max-w-full">
-          <span className="truncate max-w-[160px] sm:max-w-none">{item}</span>
-          {confirmItem === item ? (
-            <>
-              <input
-                type="password"
-                inputMode="numeric"
-                placeholder="Cod"
-                autoFocus
-                value={deleteCode}
-                onChange={e => { setDeleteCode(e.target.value); setCodeError(false) }}
-                onKeyDown={e => { if (e.key === 'Enter') confirmDelete(item); if (e.key === 'Escape') cancelDelete() }}
-                className={`w-14 text-xs px-1.5 py-0.5 rounded border outline-none focus:ring-1 focus:ring-red-400 ${codeError ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
-              />
-              <button onClick={() => confirmDelete(item)} className="shrink-0 text-red-500 hover:text-red-700 font-bold text-xs">✓</button>
-              <button onClick={cancelDelete} className="shrink-0 text-gray-400 hover:text-gray-600 text-xs">✕</button>
-            </>
-          ) : (
+    <>
+      {deleteTarget && (
+        <DeleteCodeModal
+          onConfirm={() => { onRemove(deleteTarget); setDeleteTarget(null) }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {items.map(item => (
+          <span key={item} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm max-w-full">
+            <span className="truncate max-w-[160px] sm:max-w-none">{item}</span>
             <button
-              onClick={() => startDelete(item)}
+              onClick={() => setDeleteTarget(item)}
               className="shrink-0 text-gray-400 hover:text-red-500 transition-colors ml-0.5"
             >
               <Trash2 size={13} />
             </button>
-          )}
-        </span>
-      ))}
-      {items.length === 0 && <p className="text-sm text-gray-400 mt-1">Niciun element adăugat.</p>}
-    </div>
+          </span>
+        ))}
+        {items.length === 0 && <p className="text-sm text-gray-400 mt-1">Niciun element adăugat.</p>}
+      </div>
+    </>
   )
 }
 
