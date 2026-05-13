@@ -46,7 +46,26 @@ export function AppProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .subscribe()
 
-    return () => supabase.removeChannel(canal)
+    // Polling la fiecare 15s — fallback dacă realtime nu e activat în Supabase
+    const interval = setInterval(() => {
+      fetchEntries()
+      fetchSettings()
+    }, 15000)
+
+    // Refresh imediat când tab-ul devine vizibil (ex: revenire pe alt dispozitiv)
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        fetchEntries()
+        fetchSettings()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      supabase.removeChannel(canal)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [fetchEntries, fetchSettings])
 
   function getEntry(date, branch) {
