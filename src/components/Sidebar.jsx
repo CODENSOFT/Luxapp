@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, GitBranch, Settings, TrendingUp, X } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, GitBranch, Settings, TrendingUp, X, LogOut } from 'lucide-react'
 
 const linkuri = [
   { to: '/', icon: LayoutDashboard, eticheta: 'Panou Principal' },
@@ -8,7 +8,7 @@ const linkuri = [
   { to: '/settings', icon: Settings, eticheta: 'Setări' },
 ]
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar({ open, onClose, onLogout }) {
   return (
     <>
       {open && (
@@ -52,6 +52,16 @@ export default function Sidebar({ open, onClose }) {
             </NavLink>
           ))}
         </nav>
+
+        <div className="px-3 py-4 border-t border-gray-200">
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <LogOut size={18} />
+            Delogare
+          </button>
+        </div>
       </aside>
     </>
   )

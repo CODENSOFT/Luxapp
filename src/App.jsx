@@ -146,9 +146,14 @@ function Continut() {
 
   if (loading) return <Incarcare />
 
+  function handleLogout() {
+    sessionStorage.removeItem('lux_auth')
+    window.location.reload()
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
       <main className="flex-1 overflow-y-auto">
         <Routes>
           <Route path="/" element={<Dashboard onMenuClick={() => setSidebarOpen(true)} />} />
