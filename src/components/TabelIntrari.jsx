@@ -205,7 +205,7 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
     await saveEntry(dateStr, branch, parseFloat(incValue) || 0, updated)
   }
 
-  if (!(initialExpenses || []).length) return <div className="min-h-[2.25rem]" />
+  const inpCls = 'w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1.5 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none'
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
@@ -221,9 +221,12 @@ function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig
             setDrafts([...next])
           }}
           onBlur={handleBlur}
-          className="w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none"
+          className={inpCls}
         />
       ))}
+      {/* spacer matches AvansCell's trailing empty row */}
+      <input type="text" readOnly tabIndex={-1} aria-hidden="true"
+             className="w-full min-w-[7rem] rounded-md border border-transparent bg-transparent px-1.5 py-1.5 text-[11px] pointer-events-none opacity-0" />
     </div>
   )
 }
