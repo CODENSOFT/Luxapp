@@ -53,7 +53,7 @@ export default function Branches({ onMenuClick }) {
         />
       )}
 
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1440px] mx-auto w-full">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
           <SelectorPerioada value={filter} onChange={setFilter} />
           {filter === 'custom' && (
