@@ -107,6 +107,9 @@ export default function Transactions({ onMenuClick }) {
   const empTotal = empLines.reduce((s, l) => s + l.amount, 0)
 
   const filtered = entries.filter(e => {
+    const hasData = (Number(e.incasare) || 0) > 0 ||
+      (e.expenses || []).some(x => (Number(x.amount) || 0) > 0)
+    if (!hasData) return false
     if (branchFilter !== 'toate' && e.branch !== branchFilter) return false
     if (!inRange(e.date, startDate, endDate)) return false
     if (search.trim()) return entryMatchesSearch(e, search)
