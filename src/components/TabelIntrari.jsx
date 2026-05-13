@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { X, Check, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import CellModal from './CellModal'
 import { currentMonthKey, formatMonthRo, monthDays, addMonths } from '../utils/dateUtils'
 
 const BRANCH_BG  = { 'Lunca Bâcului':'#FFD6D6','Centru':'#D6E4FF','Sîngera':'#D6FFD6','Orhei':'#E8D6FF','Мойка 5':'#FFFBD6' }
@@ -186,13 +185,55 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
   )
 }
 
+function ComentariiCell({ dateStr, branch, incValue, initialExpenses, expenseSig, saveEntry }) {
+  const [drafts, setDrafts] = useState(() => (initialExpenses || []).map(e => e.comentariu || ''))
+  const draftsRef = useRef(drafts)
+  const skipSync  = useRef(false)
+  draftsRef.current = drafts
+
+  useEffect(() => {
+    if (skipSync.current) { skipSync.current = false; return }
+    setDrafts((initialExpenses || []).map(e => e.comentariu || ''))
+  }, [expenseSig])
+
+  async function handleBlur() {
+    skipSync.current = true
+    const updated = (initialExpenses || []).map((exp, i) => ({
+      ...exp,
+      comentariu: draftsRef.current[i] ?? '',
+    }))
+    await saveEntry(dateStr, branch, parseFloat(incValue) || 0, updated)
+  }
+
+  if (!(initialExpenses || []).length) return <div className="min-h-[2.25rem]" />
+
+  return (
+    <div className="flex flex-col gap-1.5 py-1">
+      {(initialExpenses || []).map((exp, i) => (
+        <input
+          key={i}
+          type="text"
+          placeholder="notă…"
+          value={drafts[i] ?? ''}
+          onChange={e => {
+            const next = [...draftsRef.current]
+            next[i] = e.target.value
+            setDrafts([...next])
+          }}
+          onBlur={handleBlur}
+          className="w-full min-w-[7rem] rounded-md border border-transparent bg-white/60 px-1.5 py-1 text-[11px] placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:outline-none"
+        />
+      ))}
+    </div>
+  )
+}
+
 export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   const { tableBranches, getEntry, saveEntry, categories } = useApp()
   const displayBranches = branchFilter ? [branchFilter] : tableBranches
   const [month,         setMonth]         = useState(() => initialMonth || currentMonthKey())
   const [incDraft,      setIncDraft]      = useState({})
-  const [cellModal,     setCellModal]     = useState(null)
-  const [saving,        setSaving]        = useState(false)
+  const [saving,          setSaving]          = useState(false)
   const [mobileBranchIdx, setMobileBranchIdx] = useState(0)
   const [isMobile,      setIsMobile]     = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -230,19 +271,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   function grandNet()     { return activeBranches.reduce((s, b) => s + colNet(b), 0) }
   function hasCell(d, br) { return (parseFloat(getInc(d, br)) || 0) > 0 || avSum(d, br) > 0 }
   function hasMonth()     { return activeBranches.some(b => colInc(b) > 0 || colAv(b) > 0) }
-
-  // ── open CellModal (auto-save draft Încasare first) ───────────────
-  async function openCell(day, br) {
-    const dateStr = `${month}-${day}`
-    const key     = `${day}|${br}`
-    const draft   = incDraft[key]
-    if (draft !== undefined) {
-      const existing = getEntry(dateStr, br)
-      await saveEntry(dateStr, br, parseFloat(draft) || 0, existing?.expenses || [])
-      setIncDraft(p => { const n = { ...p }; delete n[key]; return n })
-    }
-    setCellModal({ dateStr, branch: br })
-  }
 
   function changeMonth(delta) {
     setMonth(m => addMonths(m, delta))
@@ -387,7 +415,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 const subCols = [
                   { label: 'Încasare', sub: 'MDL încasați', w: 92 },
                   { label: 'Avans', sub: 'Cheltuieli · Enter = rând nou', w: 188, title: 'După sumă validă, Enter adaugă următoarea cheltuială.' },
-                  { label: 'Comentarii', sub: 'Click pentru note', w: 128 },
+                  { label: 'Comentarii', sub: 'notă per cheltuială', w: 128 },
                   { label: 'Rămâne', sub: 'Încasare − cheltuieli', w: 92 },
                 ]
                 return (
@@ -447,8 +475,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     const exList = exps(day, br)
                     const net  = rowNet(day, br)
                     const hc   = hasCell(day, br)
-                    const hasComment = exList.some(e => (e.comentariu || '').trim())
-                    const hasCat = exList.some(e => e.category)
 
                     return (
                       <Fragment key={br}>
@@ -485,31 +511,20 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                         </td>
 
                         <td
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => openCell(day, br)}
-                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCell(day, br) } }}
-                          style={{ background: bgc, border, minWidth: 128, padding: '6px 8px', cursor: 'pointer', verticalAlign: 'top' }}
-                          className="group rounded-none transition-colors hover:bg-black/3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"
-                          title="Deschide fereastra cu comentarii și detalii"
+                          className="align-top"
+                          style={{ background: bgc, border, minWidth: 128, padding: '4px 6px', verticalAlign: 'top' }}
                         >
-                          <div className="flex min-h-10 flex-wrap content-start items-start gap-1.5">
-                            {hasCat ? exList.map((exp, j) => exp.category ? (
-                              <span key={j} className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-tight shadow-sm ${CAT_CLR[exp.category] || 'bg-gray-100 text-gray-600'}`}>
-                                {exp.category}
-                              </span>
-                            ) : null) : (
-                              <span className="text-[11px] leading-snug text-slate-400 group-hover:text-slate-600">
-                                Deschide pentru note…
-                              </span>
+                          <ComentariiCell
+                            key={`comm-${month}-${day}-${br}`}
+                            dateStr={`${month}-${day}`}
+                            branch={br}
+                            incValue={getInc(day, br)}
+                            initialExpenses={exList}
+                            expenseSig={JSON.stringify(
+                              (exList || []).map(e => [e.amount, e.category, e.comentariu || ''])
                             )}
-                            {hasComment && (
-                              <span className="w-full text-[10px] leading-tight text-slate-500 line-clamp-2" title={exList.map(e => e.comentariu).filter(Boolean).join(' · ')}>
-                                {exList.map(e => e.comentariu).filter(Boolean).slice(0, 1).join('')}
-                                {exList.filter(e => (e.comentariu || '').trim()).length > 1 ? '…' : ''}
-                              </span>
-                            )}
-                          </div>
+                            saveEntry={saveEntry}
+                          />
                         </td>
 
                         <td className="tabular-nums" style={{
@@ -604,14 +619,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         </button>
       </div>
 
-      {/* ── CellModal (rendered last → appears on top) ───────────── */}
-      {cellModal && (
-        <CellModal
-          date={cellModal.dateStr}
-          branch={cellModal.branch}
-          onClose={() => setCellModal(null)}
-        />
-      )}
     </div>
   )
 }
