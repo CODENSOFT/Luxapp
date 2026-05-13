@@ -5,6 +5,74 @@ import TopBar from '../components/TopBar'
 import CellModal from '../components/CellModal'
 import { formatDate, formatCurrency, inRange } from '../utils/dateUtils'
 
+/** Text indexat la căutare: filială, dată (ISO + ro), categorii, comentarii, sume (încasare / avans / rămâne). */
+function entrySearchHaystack(entry) {
+  const parts = []
+  const dateStr = entry.date || ''
+  if (dateStr) {
+    parts.push(dateStr)
+    parts.push(dateStr.replace(/-/g, '.'))
+    parts.push(dateStr.replace(/-/g, '/'))
+    parts.push(formatDate(dateStr))
+  }
+  parts.push((entry.branch || '').trim())
+
+  const inc = Number(entry.incasare) || 0
+  const avTotal = (entry.expenses || []).reduce((s, x) => s + (Number(x.amount) || 0), 0)
+  const net = inc - avTotal
+
+  function pushAmount(n) {
+    if (!Number.isFinite(n) || n === 0) return
+    parts.push(String(n))
+    parts.push(n.toFixed(2))
+    parts.push(n.toLocaleString('ro-MD', { maximumFractionDigits: 2 }))
+    parts.push(
+      new Intl.NumberFormat('ro-MD', { useGrouping: false, maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n)
+    )
+    try {
+      const cur = formatCurrency(n)
+      parts.push(cur)
+      parts.push(cur.replace(/\s*MDL\s*/gi, '').trim())
+    } catch { /* ignore */ }
+  }
+
+  pushAmount(inc)
+  pushAmount(avTotal)
+  pushAmount(net)
+
+  for (const x of entry.expenses || []) {
+    parts.push((x.category || '').trim())
+    parts.push((x.comentariu || '').trim())
+    pushAmount(Number(x.amount) || 0)
+  }
+
+  return parts
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function entryMatchesSearch(entry, searchRaw) {
+  const trimmed = searchRaw.trim().toLowerCase()
+  if (!trimmed) return true
+
+  const hay = entrySearchHaystack(entry)
+  const tokens = trimmed.split(/\s+/).filter(Boolean)
+
+  const normalizedNum = (s) => s.replace(/\s/g, '').replace(',', '.')
+
+  return tokens.every(tok => {
+    if (hay.includes(tok)) return true
+    const asNum = normalizedNum(tok)
+    if (/^\d+\.?\d*$/.test(asNum) && hay.includes(asNum)) return true
+    if (/^\d+[.,]\d{2}$/.test(tok.replace(/\s/g, ''))) {
+      const t2 = normalizedNum(tok)
+      if (hay.includes(t2)) return true
+    }
+    return false
+  })
+}
+
 export default function Transactions({ onMenuClick }) {
   const { entries, branches, deleteEntry } = useApp()
   const [search, setSearch] = useState('')
@@ -17,12 +85,7 @@ export default function Transactions({ onMenuClick }) {
   const filtered = entries.filter(e => {
     if (branchFilter !== 'toate' && e.branch !== branchFilter) return false
     if (!inRange(e.date, startDate, endDate)) return false
-    if (search) {
-      const q = search.toLowerCase()
-      const cats = (e.expenses || []).map(x => x.category).join(' ').toLowerCase()
-      const comments = (e.expenses || []).map(x => x.comentariu).join(' ').toLowerCase()
-      return e.branch.toLowerCase().includes(q) || cats.includes(q) || comments.includes(q)
-    }
+    if (search.trim()) return entryMatchesSearch(e, search)
     return true
   }).sort((a, b) => b.date.localeCompare(a.date) || b.created_at?.localeCompare(a.created_at || '') || 0)
 
@@ -46,10 +109,11 @@ export default function Transactions({ onMenuClick }) {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Caută filială, categorie, comentariu…"
+              placeholder="Filială, dată, sumă (ex. 1500 sau 1500,50), categorie, comentariu…"
               className={`${inputCls} pl-8 w-full`}
               value={search}
               onChange={e => setSearch(e.target.value)}
+              aria-label="Căutare în tranzacții"
             />
           </div>
           <select className={inputCls} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
@@ -66,7 +130,7 @@ export default function Transactions({ onMenuClick }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  {['Data', 'Filială', 'Încasare', 'Total Avans', 'Net', 'Cheltuieli', ''].map(h => (
+                  {['Data', 'Filială', 'Încasare', 'Avans (cheltuieli)', 'Rămâne (net)', 'Cheltuieli', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       {h}
                     </th>

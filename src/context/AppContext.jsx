@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AppContext = createContext(null)
@@ -110,10 +110,25 @@ export function AppProvider({ children }) {
     saveCategories(categories.filter(c => c !== name))
   }
 
+  /** Filiale pentru tabelul lunar: lista din setări + orice filială care apare în date (fără coloane lipsă). */
+  const tableBranches = useMemo(() => {
+    const base = Array.isArray(branches) && branches.length > 0 ? [...branches] : [...FILIALE_IMPLICITE]
+    const seen = new Set(base)
+    for (const e of entries) {
+      const br = e.branch
+      if (typeof br === 'string' && br.trim() && !seen.has(br)) {
+        seen.add(br)
+        base.push(br)
+      }
+    }
+    return base
+  }, [branches, entries])
+
   return (
     <AppContext.Provider value={{
       entries,
       branches,
+      tableBranches,
       categories,
       loading,
       eroare,

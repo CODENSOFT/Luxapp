@@ -4,7 +4,8 @@ import {
 } from 'recharts'
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
-import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, inRange } from '../utils/dateUtils'
+import TabelIntrari from '../components/TabelIntrari'
+import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, inRange, currentMonthKey } from '../utils/dateUtils'
 import SelectorPerioada from '../components/SelectorPerioada'
 
 export default function Branches({ onMenuClick }) {
@@ -12,6 +13,7 @@ export default function Branches({ onMenuClick }) {
   const [filter, setFilter] = useState('luna')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const [modalBranch, setModalBranch] = useState(null)
 
   function getRange() {
     if (filter === 'luna') return getMonthRange()
@@ -19,6 +21,11 @@ export default function Branches({ onMenuClick }) {
     if (filter === 'azi') return getTodayRange()
     if (filter === 'custom') return { start: customStart, end: customEnd }
     return { start: '', end: '' }
+  }
+
+  function getInitialMonth() {
+    if (filter === 'custom' && customStart) return customStart.slice(0, 7)
+    return currentMonthKey()
   }
 
   const { start, end } = getRange()
@@ -38,6 +45,14 @@ export default function Branches({ onMenuClick }) {
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50">
       <TopBar title="Statistici Filiale" onMenuClick={onMenuClick} />
 
+      {modalBranch && (
+        <TabelIntrari
+          branchFilter={modalBranch}
+          initialMonth={getInitialMonth()}
+          onClose={() => setModalBranch(null)}
+        />
+      )}
+
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
           <SelectorPerioada value={filter} onChange={setFilter} />
@@ -52,8 +67,15 @@ export default function Branches({ onMenuClick }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {stats.map(s => (
-            <div key={s.branch} className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 truncate">{s.branch}</h3>
+            <div
+              key={s.branch}
+              onClick={() => setModalBranch(s.branch)}
+              className="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+            >
+              <h3 className="text-sm font-semibold text-gray-900 mb-4 truncate flex items-center justify-between">
+                {s.branch}
+                <span className="text-[10px] font-normal text-blue-500 ml-2 shrink-0">Vezi tabel →</span>
+              </h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">Încasări</span>
