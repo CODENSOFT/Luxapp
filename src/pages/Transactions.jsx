@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Search, Edit2 } from 'lucide-react'
+import { Trash2, Search, Edit2, User, X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import TopBar from '../components/TopBar'
 import CellModal from '../components/CellModal'
@@ -81,6 +81,27 @@ export default function Transactions({ onMenuClick }) {
   const [endDate, setEndDate] = useState('')
   const [modal, setModal] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
+  const [empQuery, setEmpQuery] = useState('')
+
+  // ── Raport avansuri angajat ───────────────────────────────────────
+  const empTrimmed = empQuery.trim().toLowerCase()
+  const empLines = empTrimmed
+    ? entries
+        .filter(e => inRange(e.date, startDate, endDate))
+        .flatMap(e =>
+          (e.expenses || [])
+            .filter(exp => (exp.comentariu || '').toLowerCase().includes(empTrimmed))
+            .map(exp => ({
+              date: e.date,
+              branch: e.branch,
+              amount: Number(exp.amount) || 0,
+              category: exp.category || '',
+              comentariu: exp.comentariu || '',
+            }))
+        )
+        .sort((a, b) => b.date.localeCompare(a.date))
+    : []
+  const empTotal = empLines.reduce((s, l) => s + l.amount, 0)
 
   const filtered = entries.filter(e => {
     if (branchFilter !== 'toate' && e.branch !== branchFilter) return false
@@ -103,13 +124,14 @@ export default function Transactions({ onMenuClick }) {
         />
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
+        {/* ── Filtre principale ───────────────────────────────────── */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[180px]">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Filială, dată, sumă (ex. 1500 sau 1500,50), categorie, comentariu…"
+              placeholder="Filială, dată, sumă, categorie, comentariu…"
               className={`${inputCls} pl-8 w-full`}
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -121,8 +143,93 @@ export default function Transactions({ onMenuClick }) {
             {branches.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
           <input type="date" className={inputCls} value={startDate} onChange={e => setStartDate(e.target.value)} />
-          <span className="text-gray-400 text-sm">până la</span>
+          <span className="text-gray-400 text-sm shrink-0">până la</span>
           <input type="date" className={inputCls} value={endDate} onChange={e => setEndDate(e.target.value)} />
+        </div>
+
+        {/* ── Căutare avans angajat ────────────────────────────────── */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+          <div className="relative max-w-sm">
+            <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
+            <input
+              type="text"
+              placeholder="Caută angajat… ex: Radu"
+              className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 pl-8 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={empQuery}
+              onChange={e => setEmpQuery(e.target.value)}
+            />
+            {empQuery && (
+              <button onClick={() => setEmpQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {empTrimmed && (
+            empLines.length === 0 ? (
+              <p className="text-sm text-blue-500">Nicio cheltuială cu comentariul „{empQuery.trim()}" în perioada selectată.</p>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-semibold text-blue-800">
+                    Avansuri: <span className="text-gray-900">"{empQuery.trim()}"</span>
+                  </span>
+                  <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
+                    {empLines.length} avans{empLines.length !== 1 ? 'uri' : ''}
+                  </span>
+                  <span className="rounded-full bg-red-100 px-3 py-0.5 text-xs font-semibold text-red-700">
+                    Total: {formatCurrency(empTotal)}
+                  </span>
+                  {(startDate || endDate) && (
+                    <span className="text-xs text-blue-500">
+                      {startDate && endDate ? `${startDate} → ${endDate}` : startDate ? `de la ${startDate}` : `până la ${endDate}`}
+                    </span>
+                  )}
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-blue-200 bg-white">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-blue-100 bg-blue-50">
+                        {['Data', 'Filială', 'Categorie', 'Sumă', 'Comentariu'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-blue-600 uppercase tracking-wide whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-blue-50">
+                      {empLines.map((l, i) => (
+                        <tr key={i} className="hover:bg-blue-50/50 transition-colors">
+                          <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{formatDate(l.date)}</td>
+                          <td className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap">{l.branch}</td>
+                          <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{l.category || '—'}</td>
+                          <td className="px-3 py-2 font-semibold text-red-600 whitespace-nowrap tabular-nums">{formatCurrency(l.amount)}</td>
+                          <td className="px-3 py-2 text-gray-600 max-w-[200px] truncate" title={l.comentariu}>{l.comentariu}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-blue-200 bg-blue-50">
+                        <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                          Total
+                        </td>
+                        <td className="px-3 py-2 font-bold text-red-700 whitespace-nowrap tabular-nums">
+                          {formatCurrency(empTotal)}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )
+          )}
+
+          {!empTrimmed && (
+            <p className="text-xs text-blue-400">
+              Introduceți numele din comentariul cheltuielii (ex: „Radu" din „Avans Radu") pentru a vedea totalul avansurilor pe perioada selectată.
+            </p>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
