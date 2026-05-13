@@ -189,10 +189,25 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
 export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   const { tableBranches, getEntry, saveEntry, categories } = useApp()
   const displayBranches = branchFilter ? [branchFilter] : tableBranches
-  const [month,    setMonth]    = useState(() => initialMonth || currentMonthKey())
-  const [incDraft, setIncDraft] = useState({})        // { "day|br": "value" } — unsaved Încasare
-  const [cellModal,setCellModal]= useState(null)      // { dateStr, branch }
-  const [saving,   setSaving]   = useState(false)
+  const [month,         setMonth]         = useState(() => initialMonth || currentMonthKey())
+  const [incDraft,      setIncDraft]      = useState({})
+  const [cellModal,     setCellModal]     = useState(null)
+  const [saving,        setSaving]        = useState(false)
+  const [mobileBranchIdx, setMobileBranchIdx] = useState(0)
+  const [isMobile,      setIsMobile]     = useState(() => window.innerWidth < 768)
+  const [guideOpen,     setGuideOpen]    = useState(false)
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  const safeIdx      = Math.min(mobileBranchIdx, displayBranches.length - 1)
+  const activeBranches = (isMobile && displayBranches.length > 1)
+    ? [displayBranches[safeIdx]]
+    : displayBranches
+  const showTotalCol = activeBranches.length > 1
 
   const days   = monthDays(month)
   const todayS = new Date().toISOString().slice(0, 10)
@@ -210,13 +225,13 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   function exps(day, br)  { return getEntry(`${month}-${day}`, br)?.expenses || [] }
   function avSum(day, br) { return exps(day, br).reduce((s, x) => s + (Number(x.amount) || 0), 0) }
   function rowNet(day, br){ return (parseFloat(getInc(day, br)) || 0) - avSum(day, br) }
-  function daySum(day)    { return displayBranches.reduce((s, b) => s + rowNet(day, b), 0) }
+  function daySum(day)    { return activeBranches.reduce((s, b) => s + rowNet(day, b), 0) }
   function colInc(br)     { return days.reduce((s, d) => s + (parseFloat(getInc(d.slice(8), br)) || 0), 0) }
   function colAv(br)      { return days.reduce((s, d) => s + avSum(d.slice(8), br), 0) }
   function colNet(br)     { return colInc(br) - colAv(br) }
-  function grandNet()     { return displayBranches.reduce((s, b) => s + colNet(b), 0) }
+  function grandNet()     { return activeBranches.reduce((s, b) => s + colNet(b), 0) }
   function hasCell(d, br) { return (parseFloat(getInc(d, br)) || 0) > 0 || avSum(d, br) > 0 }
-  function hasMonth()     { return displayBranches.some(b => colInc(b) > 0 || colAv(b) > 0) }
+  function hasMonth()     { return activeBranches.some(b => colInc(b) > 0 || colAv(b) > 0) }
 
   // ── open CellModal (auto-save draft Încasare first) ───────────────
   async function openCell(day, br) {
@@ -294,46 +309,79 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         </button>
       </div>
 
-      {/* ── Ghid rapid (structură în 3 pași) ─────────────────────── */}
-      <div className="shrink-0 border-b border-slate-200/90 bg-linear-to-b from-white to-slate-50 px-4 py-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
-          Cum completați tabelul
-        </p>
-        <div className="grid gap-2.5 sm:grid-cols-3">
-          <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-              <Wallet className="h-4 w-4" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800">1. Încasare</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                Suma încasată la filială în acea zi. Rămâne în ciornă până apăsați <strong className="text-slate-700">Salvează</strong> sus-dreapta.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
-              <Coins className="h-4 w-4" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800">2. Avans (cheltuieli)</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                Completați suma și categoria. Se salvează <strong className="text-slate-700">automat</strong>. După sumă, apăsați <strong className="text-slate-700">Enter</strong> pentru o cheltuială nouă pe rândul următor.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
-              <MessageSquareText className="h-4 w-4" strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800">3. Comentarii</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                Click pe această coloană pentru <strong className="text-slate-700">note</strong>, comentarii la fiecare cheltuială și verificare detaliată.
-              </p>
-            </div>
-          </div>
+      {/* ── Tab-uri filiale (mobile) ──────────────────────────────── */}
+      {displayBranches.length > 1 && (
+        <div className="shrink-0 flex gap-1.5 overflow-x-auto px-3 py-2 border-b border-slate-700/40"
+             style={{ background: '#162d4a' }}>
+          {displayBranches.map((br, i) => (
+            <button
+              key={br}
+              onClick={() => setMobileBranchIdx(i)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                i === safeIdx && isMobile
+                  ? 'bg-white text-slate-900 shadow'
+                  : 'bg-white/15 text-white/80 hover:bg-white/25 hover:text-white'
+              }`}
+            >
+              {branchTitleCase(br)}
+            </button>
+          ))}
+          {isMobile && (
+            <span className="ml-auto shrink-0 self-center text-[10px] text-white/40 pr-1">
+              ← glisează
+            </span>
+          )}
         </div>
+      )}
+
+      {/* ── Ghid rapid (structură în 3 pași) ─────────────────────── */}
+      <div className="shrink-0 border-b border-slate-200/90 bg-white">
+        <button
+          onClick={() => setGuideOpen(o => !o)}
+          className="flex w-full items-center justify-between px-4 py-2.5 text-left"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            Cum completați tabelul
+          </p>
+          <span className="text-[11px] text-slate-400">{guideOpen ? '▲ ascunde' : '▼ arată'}</span>
+        </button>
+        {guideOpen && (
+          <div className="grid gap-2.5 sm:grid-cols-3 px-4 pb-3.5 bg-linear-to-b from-white to-slate-50">
+            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                <Wallet className="h-4 w-4" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">1. Încasare</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Suma încasată la filială în acea zi. Rămâne în ciornă până apăsați <strong className="text-slate-700">Salvează</strong> sus-dreapta.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
+                <Coins className="h-4 w-4" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">2. Avans (cheltuieli)</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Completați suma și categoria. Se salvează <strong className="text-slate-700">automat</strong>. După sumă, apăsați <strong className="text-slate-700">Enter</strong> pentru o cheltuială nouă pe rândul următor.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+                <MessageSquareText className="h-4 w-4" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">3. Comentarii</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Click pe această coloană pentru <strong className="text-slate-700">note</strong>, comentarii la fiecare cheltuială și verificare detaliată.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Tabel ─────────────────────────────────────────────────── */}
@@ -356,7 +404,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 </span>
               </th>
 
-              {displayBranches.map((br) => (
+              {activeBranches.map((br) => (
                 <th key={br} colSpan={4} scope="colgroup" style={{
                   position: 'sticky', top: 0, zIndex: 20,
                   background: '#1e3a5f', color: '#fff',
@@ -367,23 +415,25 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 }}>{branchTitleCase(br)}</th>
               ))}
 
-              <th rowSpan={2} scope="col" style={{
-                position: 'sticky', top: 0, zIndex: 20,
-                background: '#b45309', color: '#fff',
-                border: '1px solid #92400e',
-                padding: '6px 12px', textAlign: 'center',
-                minWidth: 100, fontWeight: 700, fontSize: 11,
-                verticalAlign: 'middle',
-              }}>
-                <span className="block leading-tight">Total zi</span>
-                <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/80">
-                  toate filialele
-                </span>
-              </th>
+              {showTotalCol && (
+                <th rowSpan={2} scope="col" style={{
+                  position: 'sticky', top: 0, zIndex: 20,
+                  background: '#b45309', color: '#fff',
+                  border: '1px solid #92400e',
+                  padding: '6px 12px', textAlign: 'center',
+                  minWidth: 100, fontWeight: 700, fontSize: 11,
+                  verticalAlign: 'middle',
+                }}>
+                  <span className="block leading-tight">Total zi</span>
+                  <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/80">
+                    toate filialele
+                  </span>
+                </th>
+              )}
             </tr>
 
             <tr style={{ height: ROW2, boxShadow: '0 1px 0 0 rgba(15,23,42,0.08)' }}>
-              {displayBranches.map((br, i) => {
+              {activeBranches.map((br, i) => {
                 const h = hdr(br, i)
                 const subCols = [
                   { label: 'Încasare', sub: 'MDL încasați', w: 92 },
@@ -419,7 +469,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
               const day     = dateStr.slice(8)
               const isToday = dateStr === todayS
               const ds      = daySum(day)
-              const hd      = displayBranches.some(b => hasCell(day, b))
+              const hd      = activeBranches.some(b => hasCell(day, b))
               const wd      = weekdayShortRo(dateStr)
 
               return (
@@ -442,7 +492,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     </span>
                   </td>
 
-                  {displayBranches.map((br, i) => {
+                  {activeBranches.map((br, i) => {
                     const bgc  = bg(br, i)
                     const inc  = getInc(day, br)
                     const exList = exps(day, br)
@@ -525,16 +575,18 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     )
                   })}
 
-                  <td className="tabular-nums" style={{
-                    background: hd ? '#fffbeb' : '#fafaf9',
-                    border: '1px solid #e7e5e4',
-                    textAlign: 'right', padding: '8px 12px',
-                    fontWeight: 700, fontSize: 13, minWidth: 100,
-                    verticalAlign: 'middle', whiteSpace: 'nowrap',
-                    color: !hd ? '#d6d3d1' : ds >= 0 ? '#15803d' : '#b91c1c',
-                  }} title="Însumare «Rămâne» pe toate filialele, pentru această zi">
-                    {hd ? fmt(ds) : '—'}
-                  </td>
+                  {showTotalCol && (
+                    <td className="tabular-nums" style={{
+                      background: hd ? '#fffbeb' : '#fafaf9',
+                      border: '1px solid #e7e5e4',
+                      textAlign: 'right', padding: '8px 12px',
+                      fontWeight: 700, fontSize: 13, minWidth: 100,
+                      verticalAlign: 'middle', whiteSpace: 'nowrap',
+                      color: !hd ? '#d6d3d1' : ds >= 0 ? '#15803d' : '#b91c1c',
+                    }} title="Însumare «Rămâne» pe toate filialele, pentru această zi">
+                      {hd ? fmt(ds) : '—'}
+                    </td>
+                  )}
                 </tr>
               )
             })}
@@ -555,7 +607,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 </span>
               </td>
 
-              {displayBranches.map((br, i) => {
+              {activeBranches.map((br, i) => {
                 const h  = hdr(br, i)
                 const ci = colInc(br), ca = colAv(br), cn = colNet(br)
                 const hm = ci > 0 || ca > 0
@@ -577,14 +629,16 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 )
               })}
 
-              <td title="Total general «Rămâne» în lună (toate filialele)" style={{
-                background: '#b45309', color: '#fff',
-                border: '1px solid #92400e',
-                textAlign: 'right', padding: '8px 12px',
-                fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
-              }}>
-                {hasMonth() ? fmt(grandNet()) : '—'}
-              </td>
+              {showTotalCol && (
+                <td title="Total general «Rămâne» în lună (toate filialele)" style={{
+                  background: '#b45309', color: '#fff',
+                  border: '1px solid #92400e',
+                  textAlign: 'right', padding: '8px 12px',
+                  fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
+                }}>
+                  {hasMonth() ? fmt(grandNet()) : '—'}
+                </td>
+              )}
             </tr>
           </tbody>
         </table>
