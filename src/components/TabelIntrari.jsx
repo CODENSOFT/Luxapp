@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
-import { X, Check, ChevronLeft, ChevronRight, Trash2, Coins, Wallet, MessageSquareText } from 'lucide-react'
+import { X, Check, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import CellModal from './CellModal'
 import { currentMonthKey, formatMonthRo, monthDays, addMonths } from '../utils/dateUtils'
@@ -195,8 +195,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   const [saving,        setSaving]        = useState(false)
   const [mobileBranchIdx, setMobileBranchIdx] = useState(0)
   const [isMobile,      setIsMobile]     = useState(() => window.innerWidth < 768)
-  const [guideOpen,     setGuideOpen]    = useState(false)
-
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handler)
@@ -334,55 +332,6 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
         </div>
       )}
 
-      {/* ── Ghid rapid (structură în 3 pași) ─────────────────────── */}
-      <div className="shrink-0 border-b border-slate-200/90 bg-white">
-        <button
-          onClick={() => setGuideOpen(o => !o)}
-          className="flex w-full items-center justify-between px-4 py-2.5 text-left"
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Cum completați tabelul
-          </p>
-          <span className="text-[11px] text-slate-400">{guideOpen ? '▲ ascunde' : '▼ arată'}</span>
-        </button>
-        {guideOpen && (
-          <div className="grid gap-2.5 sm:grid-cols-3 px-4 pb-3.5 bg-linear-to-b from-white to-slate-50">
-            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                <Wallet className="h-4 w-4" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800">1. Încasare</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                  Suma încasată la filială în acea zi. Rămâne în ciornă până apăsați <strong className="text-slate-700">Salvează</strong> sus-dreapta.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
-                <Coins className="h-4 w-4" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800">2. Avans (cheltuieli)</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                  Completați suma și categoria. Se salvează <strong className="text-slate-700">automat</strong>. După sumă, apăsați <strong className="text-slate-700">Enter</strong> pentru o cheltuială nouă pe rândul următor.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
-                <MessageSquareText className="h-4 w-4" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800">3. Comentarii</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                  Click pe această coloană pentru <strong className="text-slate-700">note</strong>, comentarii la fiecare cheltuială și verificare detaliată.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* ── Tabel ─────────────────────────────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3 pt-2">
