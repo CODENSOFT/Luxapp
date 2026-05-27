@@ -36,7 +36,10 @@ export default function Branches({ onMenuClick }) {
     const income = branchEntries.reduce((s, e) => s + (Number(e.incasare) || 0), 0)
     const expense = branchEntries.reduce((s, e) =>
       s + (e.expenses || []).reduce((s2, x) => s2 + (Number(x.amount) || 0), 0), 0)
-    return { branch, income, expense, net: income - expense }
+    const banca = branchEntries.reduce((s, e) =>
+      s + (e.expenses || []).reduce((s2, x) =>
+        /banca/i.test(x.comentariu || '') ? s2 + (Number(x.amount) || 0) : s2, 0), 0)
+    return { branch, income, expense, net: income - expense, banca }
   })
 
   const inputCls = "rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -85,6 +88,10 @@ export default function Branches({ onMenuClick }) {
                   <span className="text-xs text-gray-500">Cheltuieli</span>
                   <span className="text-sm font-semibold text-red-600">{formatCurrency(s.expense)}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Banca</span>
+                  <span className="text-sm font-semibold text-blue-700">{formatCurrency(s.banca)}</span>
+                </div>
                 <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
                   <span className="text-xs text-gray-500">Net</span>
                   <span className={`text-sm font-bold ${s.net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
@@ -123,7 +130,7 @@ export default function Branches({ onMenuClick }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  {['Filială', 'Total Încasări', 'Total Cheltuieli', 'Net'].map(h => (
+                  {['Filială', 'Total Încasări', 'Total Cheltuieli', 'Banca', 'Net'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       {h}
                     </th>
@@ -136,6 +143,7 @@ export default function Branches({ onMenuClick }) {
                     <td className="px-4 py-3 font-medium text-gray-900">{s.branch}</td>
                     <td className="px-4 py-3 font-semibold text-green-600">{formatCurrency(s.income)}</td>
                     <td className="px-4 py-3 font-semibold text-red-600">{formatCurrency(s.expense)}</td>
+                    <td className="px-4 py-3 font-semibold text-blue-700">{formatCurrency(s.banca)}</td>
                     <td className={`px-4 py-3 font-bold ${s.net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                       {formatCurrency(s.net)}
                     </td>

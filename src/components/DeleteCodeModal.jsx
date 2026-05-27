@@ -34,6 +34,7 @@ export default function DeleteCodeModal({ onConfirm, onCancel }) {
           <input
             ref={inputRef}
             type="password"
+            autoComplete="new-password"
             inputMode="numeric"
             placeholder="Cod de acces"
             value={code}

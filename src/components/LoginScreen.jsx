@@ -29,11 +29,12 @@ export default function LoginScreen({ onLogin }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3" autoComplete="off">
           <div className="space-y-1.5">
             <input
               ref={inputRef}
               type="password"
+              autoComplete="new-password"
               inputMode="numeric"
               placeholder="Cod de acces"
               value={code}

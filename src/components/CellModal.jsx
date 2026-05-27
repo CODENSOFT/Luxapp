@@ -28,7 +28,7 @@ export default function CellModal({ date, branch, onClose }) {
   async function handleSave() {
     setSaving(true)
     const cleanExp = expenses
-      .filter(e => parseFloat(e.amount) > 0)
+      .filter(e => parseFloat(e.amount) >= 0)
       .map(({ _id, ...e }) => ({ ...e, amount: parseFloat(e.amount) }))
     await saveEntry(date, branch, parseFloat(incasare) || 0, cleanExp)
     setSaving(false)

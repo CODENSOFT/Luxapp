@@ -36,7 +36,7 @@ export default function EntryForm({ onSaved }) {
   const labelCls = "block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide"
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Filială</label>
@@ -87,6 +87,7 @@ export default function EntryForm({ onSaved }) {
             placeholder="0.00"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
+            autoComplete="off"
           />
         </div>
 
@@ -97,6 +98,7 @@ export default function EntryForm({ onSaved }) {
             className={fieldCls}
             value={form.date}
             onChange={e => set('date', e.target.value)}
+            autoComplete="off"
           />
         </div>
 
@@ -108,6 +110,7 @@ export default function EntryForm({ onSaved }) {
             placeholder="Adaugă o notă…"
             value={form.description}
             onChange={e => set('description', e.target.value)}
+            autoComplete="off"
           />
         </div>
       </div>

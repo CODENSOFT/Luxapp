@@ -53,7 +53,7 @@ function linesFromExpenses(ex) {
 
 function cleanExpenseLines(lines) {
   return lines
-    .filter(l => parseFloat(l.amount) > 0)
+    .filter(l => l.amount !== '' && parseFloat(l.amount) >= 0)
     .map(l => ({
       amount: parseFloat(l.amount),
       category: l.category || '',
@@ -91,7 +91,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
     if (e.key !== 'Enter') return
     e.preventDefault()
     const amt = parseFloat(lines[i]?.amount)
-    if (!(amt > 0)) return
+    if (lines[i]?.amount === '' || isNaN(amt) || amt < 0) return
 
     let next = [...lines]
     if (i === next.length - 1) {
@@ -110,7 +110,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
   async function removeLine(i) {
     let next = lines.filter((_, j) => j !== i)
     if (!next.length) next = [{ amount: '', category: '', comentariu: '' }]
-    else if (parseFloat(next[next.length - 1].amount) > 0 || next[next.length - 1].category) {
+    else if ((next[next.length - 1].amount !== '' && parseFloat(next[next.length - 1].amount) >= 0) || next[next.length - 1].category) {
       next = [...next, { amount: '', category: '', comentariu: '' }]
     }
     setLines(next)
@@ -157,7 +157,7 @@ function AvansCell({ dateStr, branch, incValue, initialExpenses, expenseSig, sav
             className={inpAmt}
           />
           {(() => {
-            const lastEmpty = i === lines.length - 1 && !parseFloat(row.amount)
+            const lastEmpty = i === lines.length - 1 && row.amount === ''
             if (lastEmpty) return null
             return (
               <button
@@ -242,6 +242,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
     ? [displayBranches[safeIdx]]
     : displayBranches
   const showTotalCol = activeBranches.length > 1
+  const showBancaCol = true
 
   const days   = monthDays(month)
   const todayS = new Date().toISOString().slice(0, 10)
@@ -266,6 +267,14 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
   function grandNet()     { return activeBranches.reduce((s, b) => s + colNet(b), 0) }
   function hasCell(d, br) { return (parseFloat(getInc(d, br)) || 0) > 0 || avSum(d, br) > 0 }
   function hasMonth()     { return activeBranches.some(b => colInc(b) > 0 || colAv(b) > 0) }
+
+  function isBanca(c)     { return /banca/i.test(c || '') }
+  function bancaDay(day)  {
+    return activeBranches.reduce((s, b) =>
+      s + exps(day, b).reduce((ss, x) => isBanca(x.comentariu) ? ss + (Number(x.amount) || 0) : ss, 0)
+    , 0)
+  }
+  function bancaMonth()   { return days.reduce((s, d) => s + bancaDay(d.slice(8)), 0) }
 
   function changeMonth(delta) {
     setMonth(m => addMonths(m, delta))
@@ -404,6 +413,21 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                   </span>
                 </th>
               )}
+              {showBancaCol && (
+                <th rowSpan={2} scope="col" style={{
+                  position: 'sticky', top: 0, zIndex: 20,
+                  background: '#1e40af', color: '#fff',
+                  border: '1px solid #1e3a8a',
+                  padding: '6px 12px', textAlign: 'center',
+                  minWidth: 100, fontWeight: 700, fontSize: 11,
+                  verticalAlign: 'middle',
+                }}>
+                  <span className="block leading-tight">Banca</span>
+                  <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/80">
+                    dus la bancă
+                  </span>
+                </th>
+              )}
             </tr>
 
             <tr style={{ height: hRow2, boxShadow: '0 1px 0 0 rgba(15,23,42,0.08)' }}>
@@ -537,6 +561,21 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                       {hd ? fmt(ds) : '—'}
                     </td>
                   )}
+                  {showBancaCol && (() => {
+                    const bd = bancaDay(day)
+                    return (
+                      <td className="tabular-nums" style={{
+                        background: bd > 0 ? '#eff6ff' : '#fafaf9',
+                        border: '1px solid #bfdbfe',
+                        textAlign: 'right', padding: '8px 12px',
+                        fontWeight: 700, fontSize: 13, minWidth: 100,
+                        verticalAlign: 'middle', whiteSpace: 'nowrap',
+                        color: bd > 0 ? '#1d4ed8' : '#d6d3d1',
+                      }} title="Sume duse la bancă în această zi">
+                        {bd > 0 ? fmt(bd) : '—'}
+                      </td>
+                    )
+                  })()}
                 </tr>
               )
             })}
@@ -587,6 +626,19 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                   {hasMonth() ? fmt(grandNet()) : '—'}
                 </td>
               )}
+              {showBancaCol && (() => {
+                const bm = bancaMonth()
+                return (
+                  <td title="Total dus la bancă în această lună" style={{
+                    background: '#1e40af', color: '#fff',
+                    border: '1px solid #1e3a8a',
+                    textAlign: 'right', padding: '8px 12px',
+                    fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
+                  }}>
+                    {bm > 0 ? fmt(bm) : '—'}
+                  </td>
+                )
+              })()}
             </tr>
           </tbody>
         </table>

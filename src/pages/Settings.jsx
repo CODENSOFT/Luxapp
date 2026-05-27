@@ -40,13 +40,14 @@ function FormularAdaugare({ placeholder, onAdd }) {
     if (trimmed) { onAdd(trimmed); setValue('') }
   }
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mt-4">
+    <form onSubmit={handleSubmit} className="flex gap-2 mt-4" autoComplete="off">
       <input
         type="text"
         className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder={placeholder}
         value={value}
         onChange={e => setValue(e.target.value)}
+        autoComplete="off"
       />
       <button type="submit" className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
         <Plus size={15} />
