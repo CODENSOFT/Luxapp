@@ -44,7 +44,7 @@ function byMonthData(entries, months) {
 
 export default function Dashboard({ onMenuClick }) {
   const { entries, branches } = useApp()
-  const [filter, setFilter] = useState('luna')
+  const [filter, setFilter] = useState('tot')
   const [branchFilter, setBranchFilter] = useState('toate')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
