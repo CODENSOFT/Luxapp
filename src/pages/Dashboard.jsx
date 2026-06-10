@@ -10,6 +10,7 @@ import StatCard from '../components/StatCard'
 import TabelIntrari from '../components/TabelIntrari'
 import { formatCurrency, getMonthRange, getWeekRange, getTodayRange, monthLabel, last6Months, inRange } from '../utils/dateUtils'
 import SelectorPerioada, { FILTRE } from '../components/SelectorPerioada'
+import BranchMultiSelect from '../components/BranchMultiSelect'
 
 const PIE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
@@ -35,17 +36,11 @@ function byCategory(entries) {
     .sort((a, b) => b.value - a.value)
 }
 
-function byMonthData(entries, months) {
-  return months.map(month => {
-    const me = entries.filter(e => e.date?.startsWith(month))
-    return { month, Venit: incasariTotal(me), Cheltuială: cheltuieliTotal(me) }
-  })
-}
-
 export default function Dashboard({ onMenuClick }) {
   const { entries, branches } = useApp()
   const [filter, setFilter] = useState('tot')
-  const [branchFilter, setBranchFilter] = useState('toate')
+  const [selectedBranches, setSelectedBranches] = useState([])
+  const [expensesScope, setExpensesScope] = useState('general')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -59,18 +54,31 @@ export default function Dashboard({ onMenuClick }) {
   }
 
   const { start, end } = getRange()
-  const filtered = entries.filter(e => {
-    const inBranch = branchFilter === 'toate' || e.branch === branchFilter
-    return inBranch && inRange(e.date, start, end)
-  })
+  const allBranches = selectedBranches.length === 0 || selectedBranches.length === branches.length
+  const inDate = entries.filter(e => inRange(e.date, start, end))
 
-  const income = incasariTotal(filtered)
-  const expense = cheltuieliTotal(filtered)
+  // Venituri — mereu pe filialele selectate
+  const incomeEntries = allBranches ? inDate : inDate.filter(e => selectedBranches.includes(e.branch))
+  // Cheltuieli — „la general" (toate) sau pe filialele selectate, după comutator
+  const useGeneralExpenses = allBranches || expensesScope === 'general'
+  const expenseEntries = useGeneralExpenses ? inDate : inDate.filter(e => selectedBranches.includes(e.branch))
+
+  const income = incasariTotal(incomeEntries)
+  const expense = cheltuieliTotal(expenseEntries)
   const net = income - expense
   const months = last6Months()
-  const monthlyData = byMonthData(entries, months).map(d => ({ ...d, month: monthLabel(d.month) }))
-  const pieData = byCategory(filtered)
+  // Graficul lunar urmează aceeași logică: venituri pe selecție, cheltuieli după comutator
+  const monthlyBase = allBranches ? entries : entries.filter(e => selectedBranches.includes(e.branch))
+  const monthlyExpBase = useGeneralExpenses ? entries : monthlyBase
+  const monthlyData = months.map(month => ({
+    month: monthLabel(month),
+    Venit: incasariTotal(monthlyBase.filter(e => e.date?.startsWith(month))),
+    Cheltuială: cheltuieliTotal(monthlyExpBase.filter(e => e.date?.startsWith(month))),
+  }))
+  const pieData = byCategory(expenseEntries)
   const filterLabel = FILTRE.find(f => f.key === filter)?.label ?? ''
+  const branchLabel = allBranches ? 'Toate filialele' : selectedBranches.join(', ')
+  const expenseSubtitle = useGeneralExpenses && !allBranches ? `${filterLabel} · general` : filterLabel
 
   const inputCls = "rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 
@@ -91,10 +99,7 @@ export default function Dashboard({ onMenuClick }) {
             </div>
           )}
           <div className="flex gap-2 sm:ml-auto">
-            <select className={`${inputCls} flex-1 sm:flex-none`} value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
-              <option value="toate">Toate Filialele</option>
-              {branches.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
+            <BranchMultiSelect branches={branches} value={selectedBranches} onChange={setSelectedBranches} />
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
@@ -113,9 +118,34 @@ export default function Dashboard({ onMenuClick }) {
           </div>
         </div>
 
+        {!allBranches && (
+          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-gray-500">
+              Statistică pentru: <span className="font-medium text-gray-700">{branchLabel}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Cheltuieli:</span>
+              <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
+                <button
+                  onClick={() => setExpensesScope('general')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${expensesScope === 'general' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  La general
+                </button>
+                <button
+                  onClick={() => setExpensesScope('selected')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${expensesScope === 'selected' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  Filialele selectate
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard title="Total Venituri" amount={income} icon={TrendingUp} color="green" subtitle={filterLabel} />
-          <StatCard title="Total Cheltuieli" amount={expense} icon={TrendingDown} color="red" subtitle={filterLabel} />
+          <StatCard title="Total Cheltuieli" amount={expense} icon={TrendingDown} color="red" subtitle={expenseSubtitle} />
           <StatCard title="Profit Net" amount={net} icon={DollarSign} color={net >= 0 ? 'blue' : 'red'} subtitle={filterLabel} />
         </div>
 
