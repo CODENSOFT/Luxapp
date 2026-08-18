@@ -253,9 +253,9 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
     , 0)
   }
   function bancaMonth()   { return days.reduce((s, d) => s + bancaDay(d.slice(8)), 0) }
-  // Cheltuieli total = toate cheltuielile zilei, INCLUSIV sumele duse la bancă
-  function cheltDay(day)  { return avDay(day) }
-  function cheltMonth()   { return avMonth() }
+  // Cheltuieli total = cheltuielile zilei FĂRĂ sumele duse la bancă (banca are coloana ei)
+  function cheltDay(day)  { return avDay(day) - bancaDay(day) }
+  function cheltMonth()   { return avMonth() - bancaMonth() }
   // Net zilnic care intră/iese din seif = încasări − toate cheltuielile (inclusiv banca)
   function ramasDay(day)  { return incDay(day) - avDay(day) }
   function hasMonth()     { return activeBranches.some(b => colInc(b) > 0 || colAv(b) > 0) }
@@ -457,7 +457,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
               }}>
                 <span className="block leading-tight">Cheltuieli total</span>
                 <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-white/80">
-                  inclusiv banca
+                  fără banca
                 </span>
               </th>
 
@@ -647,7 +647,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                     )
                   })()}
 
-                  {/* Cheltuieli total (inclusiv banca) */}
+                  {/* Cheltuieli total (fără banca) */}
                   {(() => {
                     const v = cheltDay(day)
                     return (
@@ -658,7 +658,7 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                         fontWeight: 700, fontSize: 13, minWidth: 100,
                         verticalAlign: 'middle', whiteSpace: 'nowrap',
                         color: v > 0 ? '#b91c1c' : '#d6d3d1',
-                      }} title="Total cheltuieli (inclusiv sumele duse la bancă)">
+                      }} title="Total cheltuieli (fără sumele duse la bancă)">
                         {v > 0 ? fmt(v) : '—'}
                       </td>
                     )
@@ -735,8 +735,8 @@ export default function TabelIntrari({ onClose, branchFilter, initialMonth }) {
                 {bancaMonth() > 0 ? fmt(bancaMonth()) : '—'}
               </td>
 
-              {/* Cheltuieli total lună (inclusiv banca) */}
-              <td title="Total cheltuieli în lună (inclusiv banca)" style={{
+              {/* Cheltuieli total lună (fără banca) */}
+              <td title="Total cheltuieli în lună (fără sumele duse la bancă)" style={{
                 background: '#b91c1c', color: '#fff', border: '1px solid #7f1d1d',
                 textAlign: 'right', padding: '8px 12px', fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
               }}>

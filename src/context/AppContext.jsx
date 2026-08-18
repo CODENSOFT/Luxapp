@@ -114,6 +114,22 @@ export function AppProvider({ children }) {
     saveBranches(branches.filter(b => b !== name))
   }
 
+  /** Mută o filială cu o poziție mai sus/mai jos; ordinea se reflectă în tabel. */
+  function moveBranch(index, delta) {
+    const target = index + delta
+    if (index < 0 || index >= branches.length) return
+    if (target < 0 || target >= branches.length) return
+    const next = [...branches]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    saveBranches(next)
+  }
+
+  /** Salvează o ordine completă nouă a filialelor (ex: drag & drop). */
+  function reorderBranches(newList) {
+    if (!Array.isArray(newList) || newList.length !== branches.length) return
+    saveBranches(newList)
+  }
+
   function addCategory(name) {
     if (name && !categories.includes(name)) saveCategories([...categories, name])
   }
@@ -149,6 +165,8 @@ export function AppProvider({ children }) {
       deleteEntry,
       addBranch,
       removeBranch,
+      moveBranch,
+      reorderBranches,
       addCategory,
       removeCategory,
     }}>
